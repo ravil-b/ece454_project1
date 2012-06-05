@@ -12,10 +12,10 @@ Debug output
 #define DEBUG_H
 
 #ifndef DEBUG
-#define TRACE(msg)
+#define TRACE(file, msg)
 #else
-#define TRACE(msg) \
-    std::cout << msg << std::endl;
+#define TRACE(file, msg)				\
+    std::cout << file << " >> " << msg << std::endl;
 #endif
 
 #include <iostream>

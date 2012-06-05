@@ -13,11 +13,14 @@ Provides a simple interface for the user.
 #define CLI_H
 
 #include <vector>
+#include <string>
+#include "CliCmdHandler.h"
 
 struct command {
-    char cmdStr[20];
-    unsigned char numParams;
-    void *callback;
+    std::string cmdStr;
+    std::string usage;
+    int numArgs;
+    CliCmdHandler *handler;
 };
 
 class Cli {
@@ -25,13 +28,13 @@ class Cli {
  public:
  
     int run();
-    bool registerCommand(command cmd);
+    bool registerCommand(command &cmd);
 
  private:
  
     std::vector<command> commands_;
 
-    command *findMatchingCommand(char *cmdStr);
+    command *findMatchingCommand(std::string &cmdStr);
 
 };
 

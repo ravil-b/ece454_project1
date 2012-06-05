@@ -1,7 +1,16 @@
+# 
+# ECE454 Project 1
+# Ravil Baizhiyenov
+# Robin Vierich
+#
+
 CXX = g++
 CXXFLAGS = -Wall
+LFLAGS = -Wall
 
-OBJS = main.o
+OBJS = main.o Cli.o
+
+LIBS = -lboost_thread
 
 PROJECT_NAME = ece454_project1
 
@@ -10,10 +19,16 @@ OUT_OBJS = $(addprefix $(OUT_DIR)/,$(OBJS))
 EXEC = $(addprefix $(OUT_DIR)/,$(PROJECT_NAME))
 
 $(EXEC) : $(OUT_OBJS)
-	$(CXX) $^ -o $@
+	$(CXX) -o $@ $(LFLAGS) $(LIBS) $^
 
-$(OUT_DIR)/%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $@ $<
+#$(OUT_DIR)/%.o: %.cpp
+#	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $@ $<
+
+$(OUT_DIR)/main.o: main.cpp CliCmdHandler.h
+	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $(OUT_DIR)/main.o main.cpp
+
+$(OUT_DIR)/Cli.o: Cli.h Cli.cpp CliCmdHandler.h
+	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $(OUT_DIR)/Cli.o Cli.cpp
 
 
 .PHONY : clean debug
@@ -21,3 +36,6 @@ clean :
 	rm -f $(OUT_DIR)/*.o $(EXEC)
 debug : 
 	$(MAKE) $(MAKEFILE) DEBUG="-g -D DEBUG"
+
+# Crate the build directory. Sub-optimal impl, but should do it for now.
+$(shell   mkdir -p $(OUT_DIR))
