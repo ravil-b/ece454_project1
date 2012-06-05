@@ -9,7 +9,7 @@ Entry point of the application.
 */
 
 #include <iostream>
-#include <boost/thread.hpp>
+//#include <boost/thread.hpp>
 #include "debug.h"
 #include "Cli.h"
 #include "CliCmdHandler.h"
