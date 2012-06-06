@@ -1,0 +1,9 @@
+#ifndef MESSAGETYPES_H
+#define MESSAGETYPES_H
+
+
+#define MSG_DOWNLOAD_FILE 0
+#define MSG_CHUNK_AVAILABLE 1
+
+
+#endif
