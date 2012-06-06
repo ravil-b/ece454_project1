@@ -14,6 +14,7 @@ Entry point of the application.
 #include "Cli.h"
 #include "CliCmdHandler.h"
 #include "Client.h"
+#include "Server.h"
 
 #include "vector"
 
@@ -45,12 +46,22 @@ int main(int argc, char* argv[]){
     cli->registerCommand(cmd);
     // CLI Example end
 
+    // Server test begin
+    Server * s = new Server();
+    RawRequest request;
+    s->waitForRequest(&request, 4455);
+    TRACE("main.cpp", "Request Data:");
+    TRACE("main.cpp", request.data);
+    // Server test end
+
     // Client test begin
     Client *cl = new Client();
     cl->connect("localhost", "4454");
     cl->send("This is a test of the connection");
     cl->closeConnection();
     // Client test end
+
+
 
     cli->run();
     return 0;
