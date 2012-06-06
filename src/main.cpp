@@ -13,7 +13,10 @@ Entry point of the application.
 #include "debug.h"
 #include "Cli.h"
 #include "CliCmdHandler.h"
+#include "Client.h"
+
 #include "vector"
+
 
 // CLI Example begin
 class Temp : public CliCmdHandler{
@@ -41,6 +44,13 @@ int main(int argc, char* argv[]){
     cmd.handler = &temp;
     cli->registerCommand(cmd);
     // CLI Example end
+
+    // Client test begin
+    Client *cl = new Client();
+    cl->connect("localhost", "4454");
+    cl->send("This is a test of the connection");
+    cl->closeConnection();
+    // Client test end
 
     cli->run();
     return 0;
