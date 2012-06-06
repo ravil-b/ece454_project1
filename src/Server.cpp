@@ -7,26 +7,41 @@
 
 #include <cstdlib>
 #include <string>
-#include "LocalPeer.h"
 
 #include "Server.h"
+#include "debug.h"
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 
-using std::string;
 using boost::asio::ip::tcp;
+
+//boost::asio::io_service * ioService_;
+
+Server::Server()
+{
+    ioService_ = new boost::asio::io_service();
+}
+
+Server::~Server()
+{
+    delete ioService_;
+}
 
 int
 Server::readRequest(RawRequest * request, SocketPtr socket)
 {
+    TRACE("Server.cpp", "Reading request.");
     try
     {
-        int lengthCount = 0;
+        int totalLength = 0;
+        std::stringstream stream;
+
         for (;;)
         {
             char data[MAX_REQUEST_LENGTH];
             boost::system::error_code error;
+
             size_t length = socket->read_some(boost::asio::buffer(data), error);
 
             if (error == boost::asio::error::eof)
@@ -35,18 +50,23 @@ Server::readRequest(RawRequest * request, SocketPtr socket)
             }
             else if (error)
             {
+                TRACE("Server.cpp", "Read Error");
+                TRACE("Server.cpp", error.message());
                 return READ_SOCKET_ERROR;
+            }
+            else
+            {
+                std::string strData = data;
+                stream << strData;
+                totalLength += length;
             }
 
 
-            std::copy(data + lengthCount,
-                      data + lengthCount + length,
-                      request->data + lengthCount);
 
-            lengthCount += length;
-
-            boost::asio::write(*socket, boost::asio::buffer(data, length));
         }
+
+        request->data = stream.str();
+        request->messageLength = totalLength;
 
         return SERVER_OK;
     }
@@ -59,15 +79,19 @@ Server::readRequest(RawRequest * request, SocketPtr socket)
 int
 Server::waitForRequest(RawRequest * request, short port)
 {
-    boost::asio::io_service io_service;
+    TRACE("Server.cpp", "Waiting for requests.");
+    //boost::asio::io_service io_service;
 
-    tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), port));
+    tcp::acceptor acceptor(*ioService_, tcp::endpoint(tcp::v4(), port));
     for (;;)
     {
-        SocketPtr sock(new tcp::socket(io_service));
+        SocketPtr sock(new tcp::socket(*ioService_));
         acceptor.accept(*sock);
 
+        TRACE("Server.cpp", "Request received.");
+
         int err = readRequest(request, sock);
+
         return err;
     }
 }
