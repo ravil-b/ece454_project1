@@ -3,6 +3,7 @@
 #include <boost/system/error_code.hpp>
 
 #include "Client.h"
+#include "debug.h"
 
 using boost::asio::ip::tcp;
 
@@ -59,6 +60,10 @@ Client::send(const std::string data){
 
 void
 Client::closeConnection(){
+    TRACE("Client.cpp", "closeConnection()");
+    if (socket_ == NULL){
+	return;
+    }
     try{
 	socket_->shutdown(tcp::socket::shutdown_send);
     }

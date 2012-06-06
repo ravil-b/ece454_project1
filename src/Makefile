@@ -9,8 +9,13 @@ CXXFLAGS = -Wall
 LFLAGS = -Wall
 
 OBJS = main.o Cli.o Client.o
+LIBS = -lboost_system
 
-LIBS = -lboost_thread -lboost_system
+ifneq (,$(findstring x86_64,$(shell uname -a)))
+	LIBS += -lboost_thread-mt
+else
+	LIBS += -lboost_thread
+endif
 
 PROJECT_NAME = ece454_project1
 
@@ -21,16 +26,13 @@ EXEC = $(addprefix $(OUT_DIR)/,$(PROJECT_NAME))
 $(EXEC) : $(OUT_OBJS)
 	$(CXX) -o $@ $(LFLAGS) $(LIBS) $^
 
-#$(OUT_DIR)/%.o: %.cpp
-#	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $@ $<
-
 $(OUT_DIR)/main.o: main.cpp CliCmdHandler.h Client.h
 	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $(OUT_DIR)/main.o main.cpp
 
 $(OUT_DIR)/Cli.o: Cli.h Cli.cpp CliCmdHandler.h
 	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $(OUT_DIR)/Cli.o Cli.cpp
 
-$(OUT_DIR)/Cli.o: Client.h
+$(OUT_DIR)/Client.o: Client.h Client.cpp
 	$(CXX) $(CXXFLAGS) $(DEBUG) -c -o $(OUT_DIR)/Client.o Client.cpp
 
 
