@@ -5,12 +5,18 @@
 // with associated helper classes and constants
 //
 
+// This file is provided by the instructor and specifies the public interface of Peer and Status.
+// It has been modified to suit our implementation.
+// Unfortunately, we didn't have full control over the overall spec of the classes here.
+
 // Various limits
+
 
 #ifndef PEER_H
 #define PEER_H
 
 #include <string>
+#include "Cli.h"
 
 using namespace std;
 
@@ -18,38 +24,17 @@ const int chunkSize = 65536;
 const int maxPeers  = 6;
 const int maxFiles  = 100;    // Cheesy, but allows us to do a simple Status class
 
-class Peer;
 class Status;
 
 class Peers;
 
-// Peers is a dumb container to hold the peers; the number of peers is fixed,
-// but needs to be set up when a peer starts up; feel free to use some other
-// container class, but that class must have a method that allows it to read
-// the peersFile, since otherwise you have no way of having a calling entity 
-// tell your code what the peers are in the system.
-
-class Peers {
-public:
-    int initialize(string peersFile); // The peersFile is the name of a file that contains a list of the peers
-                                      // Its format is as follows: in plaintext there are up to maxPeers lines,
-                                      // where each line is of the form: <IP address> <port number>
-                                      // This file should be available on every machine on which a peer is started,
-                                      // though you should exit gracefully if it is absent or incorrectly formatted.
-                                      // After execution of this method, the _peers should be present.
-    Peer operator()(int i);
-    
-    // You will likely want to add methods such as visit()
-    
-private:
-    int _numPeers;
-    Peer _peers[maxPeers];
-};
 
 // Peer and Status are the classes we really care about
 // Peers is a container; feel free to do a different container
 
 class Peer {
+    Peer(int peerNum, string ip, string port);
+
     // This is the formal interface and you should follow it
 public:
     int insert(string filename);
@@ -60,9 +45,39 @@ public:
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
 private:
-    enum State { connected, disconnected, unknown } _state;
-    Peers _peers;
+    int peerNum_;
+    enum State { connected, disconnected, unknown } state_;
+    Peers *peers_;
 };
+
+// Peers is a dumb container to hold the peers; the number of peers is fixed,
+// but needs to be set up when a peer starts up; feel free to use some other
+// container class, but that class must have a method that allows it to read
+// the peersFile, since otherwise you have no way of having a calling entity 
+// tell your code what the peers are in the system.
+
+class Peers : public CliCmdHandler {
+ public:
+    Peers(Cli *cli) : CliCmdHandler(cli) {}
+
+    int initialize(const string &peersFile); 
+                                      // The peersFile is the name of a file that contains a list of the peers
+                                      // Its format is as follows: in plaintext there are up to maxPeers lines,
+                                      // where each line is of the form: <IP address> <port number>
+                                      // This file should be available on every machine on which a peer is started,
+                                      // though you should exit gracefully if it is absent or incorrectly formatted.
+                                      // After execution of this method, the _peers should be present.
+    Peer operator()(int i);
+    
+    // You will likely want to add methods such as visit()
+    void handleCmd(vector<string> *cmd);
+
+private:
+    void initPeer(int peerNumber, string ip, string port);
+    int numPeers_;
+    Peer *peers_[maxPeers];
+};
+
 
 // Status is the class that you populate with status data on the state
 // of replication in this peer and its knowledge of the replication
@@ -105,12 +120,15 @@ private:
 // Using enum here is a bad idea, unless you spell out the values, since it is
 // shared with code you don't write.
 
-const int errOK             =  0; // Everything good
-const int errUnknownWarning =  1; // Unknown warning
-const int errUnknownFatal   = -2; // Unknown error
-const int errCannotConnect  = -3; // Cannot connect to anything; fatal error
-const int errNoPeersFound   = -4; // Cannot find any peer (e.g., no peers in a peer file); fatal
-const int errPeerNotFound   =  5; // Cannot find some peer; warning, since others may be connectable
+const int errOK                =  0; // Everything good
+const int errUnknownWarning    =  1; // Unknown warning
+const int errUnknownFatal      = -2; // Unknown error
+const int errCannotConnect     = -3; // Cannot connect to anything; fatal error
+const int errNoPeersFound      = -4; // Cannot find any peer (e.g., no peers in a peer file); fatal
+const int errPeerNotFound      =  5; // Cannot find some peer; warning, since others may be connectable
+const int errPeersFileNotFound = -6; // Cannot find the peers file.
+const int errPeersFileReadFail = -7; // Cannot read the peers file.
+const int errPeersFileFmtFail  = -7; // The peers file has wrong format.
 
 // please add as necessary
 

@@ -22,9 +22,13 @@ Provides a simple interface for the user.
 using namespace std;
 using namespace boost;
 
-int 
+Cli::Cli(){
+    terminate_ = false;
+}
+
+void 
 Cli::run(){
-    TRACE("cli.cpp", "run()");
+    TRACE("Cli.cpp", "run()");
     while (true){
 	string inputLine;
 	getline(cin, inputLine);
@@ -40,9 +44,14 @@ Cli::run(){
 	    continue;
 	}
 	
-	command *matchedCmd = findMatchingCommand(splitInput[0]);
+	// Quit the program
+	if ((strcmp(splitInput[0].c_str(), "quit") == 0) && splitInput.size() == 1){
+	    break;
+	}
+
+	Command *matchedCmd = findMatchingCommand(splitInput[0]);
 	if (matchedCmd == NULL){
-	    cout << "not matched" << endl;
+	    cout << "Unknown command" << endl;
 	    continue;
 	}
 	if (unsigned(matchedCmd->numArgs + 1) != splitInput.size()){
@@ -52,13 +61,16 @@ Cli::run(){
 	}
 
 	matchedCmd->handler->handleCmd(&splitInput);
+
+	if (terminate_){
+	    break;
+	}
     }
-    return 0;
 }
 
 bool
-Cli::registerCommand(command &cmd){
-    TRACE("cli.cpp", "registerCommand()");
+Cli::registerCommand(Command &cmd){
+    TRACE("Cli.cpp", "registerCommand()");
     
     if (findMatchingCommand(cmd.cmdStr) == NULL){
 	commands_.push_back(cmd);
@@ -67,11 +79,32 @@ Cli::registerCommand(command &cmd){
     return false;
 }
 
-command *
-Cli::findMatchingCommand(string &cmdStr){
-    TRACE("cli.cpp", "findMatchingCommand()");
+void
+Cli::terminate(){
+    TRACE("Cli.cpp", "terminate()");
+    terminate_ = true;
+}
 
-    vector<command>::iterator iter;
+void
+Cli::removeHandler(CliCmdHandler *handler){
+    TRACE("Cli.cpp", "removeHandler()");
+
+    vector<Command>::iterator iter = commands_.begin();
+    while (iter != commands_.end()){
+	if ((*iter).handler == handler){
+	    commands_.erase(iter);
+	}
+	else{
+	    iter++;
+	}
+    }
+}
+
+Command *
+Cli::findMatchingCommand(string &cmdStr){
+    TRACE("Cli.cpp", "findMatchingCommand()");
+
+    vector<Command>::iterator iter;
     for (iter = commands_.begin(); iter != commands_.end(); iter++){
 	if (strcmp(cmdStr.c_str(), (*iter).cmdStr.c_str()) == 0){
 	    return &(*iter);
@@ -79,3 +112,4 @@ Cli::findMatchingCommand(string &cmdStr){
     }
     return NULL;
 }
+

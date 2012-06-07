@@ -22,6 +22,7 @@ Client::~Client(){
 
 int
 Client::connect(const std::string &ip, const std::string &port){
+    TRACE("Client.cpp", "Connecting to socket.");
     int retVal = CLIENT_CONNECTION_OK;
 
     tcp::resolver res(*ioService_);
@@ -50,6 +51,7 @@ Client::connect(const std::string &ip, const std::string &port){
 
 int
 Client::send(const std::string data){
+    TRACE("Client.cpp", "Sending data.");
     if (socket_ == NULL){
 	// TODO Error code
 	return CLIENT_SEND_ERR;
@@ -60,7 +62,7 @@ Client::send(const std::string data){
 
 void
 Client::closeConnection(){
-    TRACE("Client.cpp", "closeConnection()");
+    TRACE("Client.cpp", "Closing Connection.");
     if (socket_ == NULL){
 	return;
     }
