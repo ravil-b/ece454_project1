@@ -25,29 +25,44 @@ const int maxPeers  = 6;
 const int maxFiles  = 100;    // Cheesy, but allows us to do a simple Status class
 
 class Status;
-
 class Peers;
-
+class Server;
+class Client;
+namespace boost{
+    class thread;
+};
 
 // Peer and Status are the classes we really care about
 // Peers is a container; feel free to do a different container
 
 class Peer {
-    Peer(int peerNum, string ip, string port);
+
+public:
+    Peer(int peerNumber, string ip, string port);
+    ~Peer();
 
     // This is the formal interface and you should follow it
-public:
     int insert(string filename);
     int query(Status& status);
     int join();     // Note that we should have the peer list, so it is not needed as a parameter
     int leave();
 
+    int initLocalPeer();
+    int initRemotePeer();
+
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
 private:
-    int peerNum_;
-    enum State { connected, disconnected, unknown } state_;
+    int peerNumber_;
+    string ip_;
+    string port_;
+    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
+    Client *client_;
+    Server *server_;
     Peers *peers_;
+    boost::thread *incomingConnectionsThread_;
+
+    void acceptConnections();
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,
@@ -58,9 +73,10 @@ private:
 
 class Peers : public CliCmdHandler {
  public:
-    Peers(Cli *cli) : CliCmdHandler(cli) {}
+    Peers(Cli *cli, const string &peersFile);
+    ~Peers();
 
-    int initialize(const string &peersFile); 
+    int initialize(); 
                                       // The peersFile is the name of a file that contains a list of the peers
                                       // Its format is as follows: in plaintext there are up to maxPeers lines,
                                       // where each line is of the form: <IP address> <port number>
@@ -72,8 +88,10 @@ class Peers : public CliCmdHandler {
     // You will likely want to add methods such as visit()
     void handleCmd(vector<string> *cmd);
 
-private:
+ private:
     void initPeer(int peerNumber, string ip, string port);
+
+    string peersFile_;
     int numPeers_;
     Peer *peers_[maxPeers];
 };

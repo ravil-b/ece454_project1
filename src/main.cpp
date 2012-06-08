@@ -47,16 +47,16 @@ main(int argc, char* argv[]){
     Cli *cli = new Cli();
     boost::thread cliThread(boost::bind(&Cli::run, cli));
 
-    Peers *peers = new Peers(cli);
-    peers->initialize("peers.txt");
-
+    Peers *peers = new Peers(cli, "peers.txt");
+    boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
+    
     // CLI Handler Example begin
-    Temp *temp = new Temp(cli);
-    Command cmd;
-    cmd.cmdStr = "test_command";
-    cmd.numArgs = 1;
-    cmd.handler = temp;
-    cli->registerCommand(cmd);
+    // Temp *temp = new Temp(cli);
+    // Command cmd;
+    // cmd.cmdStr = "test_command";
+    // cmd.numArgs = 1;
+    // cmd.handler = temp;
+    // cli->registerCommand(cmd);
     //delete temp;
     // CLI Example end
 
@@ -69,13 +69,13 @@ main(int argc, char* argv[]){
     // cl->closeConnection();
     // // Client test end
 
-    // // Server test begin
+    // Server test begin
     // Server * s = new Server();
     // RawRequest request;
-    // s->waitForRequest(&request, 4455);
+    // s->waitForRequest(&request, 4456);
     // TRACE("main.cpp", "Request Data:");
     // TRACE("main.cpp", request.data);
-    // // Server test end
+    // Server test end
 
 
     // Cli::run() returns when the user types "quit" in terminal
