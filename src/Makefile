@@ -15,7 +15,7 @@ CXXFLAGS = -Wall
 LFLAGS = -Wall
 
 LIBS = -lboost_system
-OBJS = main.o Cli.o Client.o Server.o peer.o
+OBJS = main.o Cli.o Client.o Server.o peer.o ThreadSafeQueue.o
 
 PROJECT_NAME = ece454_project1
 
@@ -43,7 +43,7 @@ $(EXEC) : $(OUT_OBJS)
 
 # Compiling
 # This is all very manual and tedious... If have time, implement auto prereqs.
-$(OUT_DIR)/main.o: main.cpp Client.h Server.h Cli.h peer.h
+$(OUT_DIR)/main.o: main.cpp Client.h Server.h Cli.h peer.h ThreadSafeQueue.h
 	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/main.o main.cpp
 
 $(OUT_DIR)/Cli.o: Cli.h Cli.cpp
@@ -57,6 +57,9 @@ $(OUT_DIR)/Server.o: Server.h Server.cpp
 
 $(OUT_DIR)/peer.o: peer.h peer.cpp
 	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/peer.o peer.cpp
+
+$(OUT_DIR)/ThreadSafeQueue.o: ThreadSafeQueue.h ThreadSafeQueue.cpp
+	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/ThreadSafeQueue.o ThreadSafeQueue.cpp
 
 # clean and debug targets
 .PHONY : clean debug
