@@ -19,12 +19,13 @@
 
 #include <string>
 #include "Cli.h"
+#include "Frames.h"
+#include "Server.h"
+#include "Globals.h"
 
 using namespace std;
 
-const int chunkSize = 65536;
-const int maxPeers  = 6;
-const int maxFiles  = 100;    // Cheesy, but allows us to do a simple Status class
+
 
 class Status;
 class Peers;
@@ -53,14 +54,17 @@ public:
     int initRemotePeer();
 
     int getPeerNumber();
-    string getIp();
+    string getIpAddress();
     string getPort();
+
+    int broadcastFrame(Frame message);
+    int sendFrame(Frame message, Peer* toPeer);
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
 private:
     int peerNumber_;
-    string ip_;
+    string ipAddress_;
     string port_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
     Client *client_;
@@ -95,9 +99,8 @@ class Peers : public CliCmdHandler {
     void handleCmd(vector<string> *cmd);
     void addPeer(Peer * newPeer);
     void removePeer(Peer * peer);
-
+    Peer ** getPeers();
  private:
-
 
     string peersFile_;
     int numPeers_;
@@ -158,6 +161,9 @@ const int errPeersFileFmtFail  = -7; // The peers file has wrong format.
 
 const int errInsertFileNotFound    = -8; // can't find the file to insert.
 const int errCannotCopyInsertFile  = -9; // something went wrong copying the file to be inserted
+
+const int errCannotSendMessage  = -10;
+
 
 // please add as necessary
 
