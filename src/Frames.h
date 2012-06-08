@@ -1,9 +1,12 @@
 #ifndef MESSAGETYPES_H
 #define MESSAGETYPES_H
 
+
+#include <string>
+#include <vector>
 #include "Globals.h"
 
-const short FRAME_LENGTH = 65542;
+const int FRAME_LENGTH = 65542;
 const short MAX_FILE_NAME_LENGTH = 512;
 
 enum FrameType
@@ -67,7 +70,7 @@ struct FileListFrame: Frame
     std::vector<FileInfo> getFileInfos();
 
 private:
-    std::vector<FileInfo> fileInfos_;
+    std::vector<FileInfo> * fileInfos_;
 };
 struct FileListRequestFrame: Frame{};
 struct FileListDeclineFrame: Frame{};

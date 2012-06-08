@@ -15,7 +15,7 @@ CXXFLAGS = -Wall
 LFLAGS = -Wall
 
 LIBS = -lboost_system
-OBJS = main.o Cli.o Client.o Server.o peer.o
+OBJS = main.o Frames.o Cli.o Client.o Server.o peer.o
 
 PROJECT_NAME = ece454_project1
 
@@ -50,6 +50,9 @@ $(OUT_DIR)/main.o: main.cpp Client.h Server.h Cli.h peer.h
 
 $(OUT_DIR)/Cli.o: Cli.h Cli.cpp
 	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Cli.o Cli.cpp
+
+$(OUT_DIR)/Frames.o: Frames.h Frames.cpp
+	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Frames.o Frames.cpp
 
 $(OUT_DIR)/Client.o: Client.h Client.cpp
 	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Client.o Client.cpp
