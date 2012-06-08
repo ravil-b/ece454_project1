@@ -24,8 +24,9 @@ Entry point of the application.
 #include "Server.h"
 #include "peer.h"
 #include "ThreadSafeQueue.cpp"
+#include "FileChunkIO.h"
 #include "vector"
-
+#include <limits>
 
 
 // CLI Example begin
@@ -71,18 +72,56 @@ main(int argc, char* argv[]){
     TRACE("main.cpp", "Initializing CLI");
 
     // Initialize Cli and run it in a separate thread.
-    Cli *cli = new Cli();
-    boost::thread cliThread(boost::bind(&Cli::run, cli));
+    //Cli *cli = new Cli();
+    //boost::thread cliThread(boost::bind(&Cli::run, cli));
 
-    Peers *peers = new Peers(cli, "peers.txt");
-    boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
-    
-    ThreadSafeQueue<int> *tq = new ThreadSafeQueue<int>();
-    boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
-    boost::thread consumerThread2(boost::bind(&consumer, tq, 2));
-    boost::thread consumerThread3(boost::bind(&consumer, tq, 3));
-    boost::thread producerThread1(boost::bind(&producer, tq, 1));
-    boost::thread producerThread2(boost::bind(&producer, tq, 2));
+    FileChunkIO * fileChunkIO = new FileChunkIO();
+
+    char chunkData[chunkSize];
+
+    char charMaxVal = std::numeric_limits<char>::max();
+
+    for (int i = 0; i < chunkSize; i ++)
+    {
+        chunkData[i] = ((char)i % charMaxVal);
+    }
+
+
+    string writeChunkString (chunkData, chunkSize);
+    cout << "Writing chunk string: " << writeChunkString << endl;
+    fileChunkIO->writeChunk("C:/test1", 0, chunkData);
+
+
+    char readChunkData [chunkSize];
+    fileChunkIO->readChunk("C:/test1", 0, readChunkData);
+
+    cout << "Read chunk string: " << endl;
+    for (int i = 0; i < chunkSize; i ++)
+    {
+        char asciiNumber[4];
+        itoa((int)readChunkData[i], asciiNumber, 10);
+
+        cout << asciiNumber << endl;
+    }
+
+
+
+
+
+
+
+//    Peers *peers = new Peers(cli, "peers.txt");
+//    boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
+//
+//    ThreadSafeQueue<int> *tq = new ThreadSafeQueue<int>();
+//    boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
+//    boost::thread consumerThread2(boost::bind(&consumer, tq, 2));
+//    boost::thread consumerThread3(boost::bind(&consumer, tq, 3));
+//    boost::thread producerThread1(boost::bind(&producer, tq, 1));
+//    boost::thread producerThread2(boost::bind(&producer, tq, 2));
+
+
+
 
     // CLI Handler Example begin
     // Temp *temp = new Temp(cli);
@@ -114,7 +153,7 @@ main(int argc, char* argv[]){
 
     // Cli::run() returns when the user types "quit" in terminal
     // TODO make sure the client gracefully shutsdown...
-    cliThread.join();
+    //cliThread.join();
     
     return 0;
 }
