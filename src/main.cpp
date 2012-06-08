@@ -8,6 +8,10 @@ Robin Vierich
 Entry point of the application.
 */
 
+
+#define BOOST_THREAD_USE_LIB
+
+
 #include <iostream>
 #include <boost/thread.hpp>
 #include "debug.h"
@@ -18,6 +22,7 @@ Entry point of the application.
 #include "ThreadSafeQueue.cpp"
 
 #include "vector"
+
 
 
 // CLI Example begin

@@ -1,4 +1,9 @@
 
+#define BOOST_THREAD_USE_LIB
+
+
+
+
 #include "debug.h"
 #include "peer.h"
 #include "Client.h"
@@ -10,6 +15,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/thread.hpp>
+
+
 
 using namespace std;
 using namespace boost;
@@ -53,7 +60,7 @@ Peers::initialize(){
 		TRACE("peer.cpp", "The peers file has wrong format");
 		return errPeersFileFmtFail;
 	    }
-	    initPeer(lineNum, splitLine[0], splitLine[1]);
+	    addPeer(new Peer (lineNum, splitLine[0], splitLine[1]));
 	    lineNum++;
 	}
 	if (lineNum != maxPeers){
@@ -69,14 +76,26 @@ Peers::initialize(){
 // For simplicity, we assume that the first entry in the peers file corresponds 
 // to the local peer.
 void
-Peers::initPeer(int peerNumber, string ip, string port){
+Peers::addPeer(Peer * newPeer){
     TRACE("peers.cpp", "Adding a new peer");
-    if (peerNumber >= maxPeers){
+
+    if (newPeer->getPeerNumber() >= maxPeers){
     	TRACE("peers.cpp", "Attempt to add a peer out of range");
     	return;
     }
-    Peer *p = new Peer(peerNumber, ip, port);
-    peers_[peerNumber] = p;
+    peers_[newPeer->getPeerNumber()] = newPeer;
+}
+
+void
+Peers::removePeer(Peer * peer)
+{
+    TRACE("peers.cpp", "Removing Peer");
+    if (peer->getPeerNumber() >= maxPeers){
+        TRACE("peers.cpp", "Attempt to remove a peer out of range");
+        return;
+    }
+    delete peers_[peer->getPeerNumber()];
+    peers_[peer->getPeerNumber()] = 0;
 }
 
 void 
@@ -108,10 +127,10 @@ Peer::Peer(int peerNumber, string ip, string port)
 
 Peer::~Peer(){
     if (client_ != NULL){
-	delete client_;
+        delete client_;
     }
     if (server_ != NULL){
-	delete server_;
+        delete server_;
     }
 }
 
@@ -140,9 +159,73 @@ Peer::acceptConnections(){
 	// TODO Crash and burn
     }
     while(true){
-	RawRequest request;
-	server_->waitForRequest(&request, port);
-	TRACE("peer.cpp", "Request Data:");
-	TRACE("peer.cpp", request.data);
+        RawRequest request;
+	    server_->waitForRequest(&request, port);
+	    TRACE("peer.cpp", "Request Data:");
+	    TRACE("peer.cpp", request.data);
     }
+}
+
+int Peer::insert(string fileName)
+{
+    filesystem::path pathToNewFile(fileName);
+    if (!filesystem::exists(pathToNewFile)){
+        cout << fileName << " does not exist!" << endl;
+        return errInsertFileNotFound;
+    }
+    try
+    {
+        filesystem::path pathToLocalStore(LOCAL_STORAGE_PATH_NAME);
+        pathToLocalStore /= pathToNewFile.filename().string();
+
+        filesystem::copy_file(pathToNewFile, pathToLocalStore, filesystem::copy_option::overwrite_if_exists);
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "Problem copying to localStorage: " << e.what() << "\n";
+        return errCannotCopyInsertFile;
+    }
+
+    return errOK;
+}
+
+int Peer::query(Status& status)
+{
+
+}
+
+
+int Peer::leave()
+{
+    // inform peers that this peer is leaving
+
+    // check if this peer has chunks that no one else has
+        // if so, push those out
+
+    // close down server/client sockets
+
+    peers_->removePeer(this);
+    return errOK;
+}
+
+int Peer::join()
+{
+    peers_->addPeer(this);
+    return errOK;
+}
+
+
+int Peer::getPeerNumber()
+{
+    return peerNumber_;
+}
+
+string Peer::getIp()
+{
+    return ip_;
+}
+
+string Peer::getPort()
+{
+    return port_;
 }

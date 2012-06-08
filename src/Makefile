@@ -23,12 +23,14 @@ OUT_DIR = ../build
 OUT_OBJS = $(addprefix $(OUT_DIR)/,$(OBJS))
 EXEC = $(addprefix $(OUT_DIR)/,$(PROJECT_NAME))
 
+#DEFINES = -DBOOST_THREAD_USE_LIB
+
 # Platform-specific variables
 ifeq ($(PLATFORM), WIN)					# WINDOWS
 	INCLUDES = -I"C:\boost\boost_1_49_0"
 	LIBPATH = -L"C:\boost\boost_1_49_0\stage\lib"
 	WINLIBEXTENSION = -mgw46-mt-d-1_49 # minGW linker - built with MultiThreading - debug enabled - v1.49
-	LIBS = -lboost_thread$(WINLIBEXTENSION) -lboost_system$(WINLIBEXTENSION) -lws2_32 # need to link with winsock32 as well
+	LIBS =  -lboost_thread$(WINLIBEXTENSION) -lboost_system$(WINLIBEXTENSION) -lboost_filesystem$(WINLIBEXTENSION)  -lws2_32  # need to link with winsock32 as well
 else							# LINUX
 ifneq (,$(findstring x86_64,$(shell uname -a)))		# 64bit
 	LIBS += -lboost_thread-mt -lboost_filesystem-mt
@@ -39,7 +41,7 @@ endif
 
 # Lining the object files
 $(EXEC) : $(OUT_OBJS)
-	$(CXX) -o $@ $(LFLAGS) $^ $(LIBPATH) $(LIBS)
+	$(CXX) -o $@ $(LFLAGS) $^ $(LIBPATH) $(LIBS) 
 
 # Compiling
 # This is all very manual and tedious... If have time, implement auto prereqs.
