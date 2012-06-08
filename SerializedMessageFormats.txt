@@ -1,0 +1,57 @@
+Serialized Message Formats
+
+// CHUNK
+
+| messageType | fileNum | chunkNum |         data         |
+-----------------------------------------------------------
+|     char    |  char   |   int    |    char[65536]       |
+
+
+
+// CHUNK_REQUEST
+
+| messageType | fileNum | chunkNum |
+------------------------------------
+|     char    |  char   |   int    |
+
+
+
+// FILE_LIST
+
+| messageType | fileCount |  file1Num |  file1ChunkCount |  file1Name  |  file2Num  |  ...
+---------------------------------------------------------------------------------------
+|     char    |    char   |    char   |       int        |  char[512]  |    char    |  ... 
+
+Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 files with this 512byte fileName standard
+
+
+
+// FILE_LIST_REQUEST
+
+| messageType |
+---------------
+|     char    |
+
+
+
+// FILE_LIST_DECLINE
+
+| messageType |
+---------------
+|     char    |
+
+
+
+// NEW_FILE_AVAILABLE
+
+| messageType |  file1Num   |   chunkCount   |  fileName   |
+------------------------------------------------------------
+|     char    |    char     |      int       |  char[512]  |
+
+
+
+// NEW_CHUNK_AVAILABLE
+
+| messageType |  file1Num   |  chunkNum  |
+------------------------------------------
+|     char    |     char    |    int     |

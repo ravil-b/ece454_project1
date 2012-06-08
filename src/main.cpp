@@ -11,6 +11,10 @@ Entry point of the application.
 
 #define BOOST_THREAD_USE_LIB
 
+#ifdef PLATFORM_WIN
+#define sleep(x) Sleep(x) // windows uses a capital S...
+#endif
+
 
 #include <iostream>
 #include <boost/thread.hpp>
@@ -19,6 +23,7 @@ Entry point of the application.
 #include "Client.h"
 #include "Server.h"
 #include "peer.h"
+
 #include "ThreadSafeQueue.h"
 #include "Connection.h"
 

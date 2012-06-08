@@ -8,6 +8,7 @@
 #include "peer.h"
 #include "Client.h"
 #include "Server.h"
+#include "Frames.h"
 
 #include <vector>
 #include <boost/algorithm/string.hpp>
@@ -95,7 +96,7 @@ Peers::removePeer(Peer * peer)
         return;
     }
     delete peers_[peer->getPeerNumber()];
-    peers_[peer->getPeerNumber()] = 0;
+    peers_[peer->getPeerNumber()] = NULL;
 }
 
 void 
@@ -104,13 +105,19 @@ Peers::handleCmd(vector<string> *cmd){
 }
 
 
+Peer **
+Peers::getPeers()
+{
+    return peers_;
+}
+
 /*
  * Peer
  */
 
 Peer::Peer(int peerNumber, string ip, string port)
     : peerNumber_(peerNumber), 
-      ip_(ip), 
+      ipAddress_(ip),
       port_(port),
       state_(UNKNOWN), 
       client_(NULL), 
@@ -146,6 +153,7 @@ Peer::initLocalPeer(){
     return errOK;
 }
 
+
 int 
 Peer::initRemotePeer(){
     return errOK;
@@ -159,10 +167,10 @@ Peer::acceptConnections(){
 	// TODO Crash and burn
     }
     while(true){
-        RawRequest request;
+        Frame request;
 	    server_->waitForRequest(&request, port);
 	    TRACE("peer.cpp", "Request Data:");
-	    TRACE("peer.cpp", request.data);
+	    TRACE("peer.cpp", request.serializedData);
     }
 }
 
@@ -214,15 +222,45 @@ int Peer::join()
     return errOK;
 }
 
+int
+Peer::broadcastFrame(Frame frame)
+{
+    for (int i = 0; i < maxPeers; i++)
+    {
+        Peer * peer = peers_->getPeers()[i];
+        if (peer == NULL) continue;
+        if (peer == this) continue;
+
+        int retVal = sendFrame(frame, peer);
+
+        if (retVal == errCannotSendMessage)
+            return errCannotSendMessage;
+    }
+    return errOK;
+}
+
+int
+Peer::sendFrame(Frame frame, Peer * toPeer)
+{
+    try{
+        // this.client.sendMessage(peer.getIpAddress(), frame.data)
+    }
+    catch (std::exception& e)
+    {
+       std::cerr << "Problem sending frame to peer #" << toPeer->getPeerNumber() << " " << e.what() << "\n";
+       return errCannotSendMessage;
+    }
+    return errOK;
+}
 
 int Peer::getPeerNumber()
 {
     return peerNumber_;
 }
 
-string Peer::getIp()
+string Peer::getIpAddress()
 {
-    return ip_;
+    return ipAddress_;
 }
 
 string Peer::getPort()

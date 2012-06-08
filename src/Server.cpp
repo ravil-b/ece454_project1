@@ -29,9 +29,9 @@ Server::~Server()
 }
 
 int
-Server::readRequest(RawRequest * request, SocketPtr socket)
+Server::readRequest(Frame * frame, SocketPtr socket)
 {
-    TRACE("Server.cpp", "Reading request.");
+    TRACE("Server.cpp", "Reading frame.");
     try
     {
         int totalLength = 0;
@@ -56,17 +56,12 @@ Server::readRequest(RawRequest * request, SocketPtr socket)
             }
             else
             {
-                std::string strData = data;
-                stream << strData;
+                std::fill(data, data + totalLength, frame->serializedData[0]);
                 totalLength += length;
             }
 
-
-
         }
 
-        request->data = stream.str();
-        request->messageLength = totalLength;
     }
     catch (std::exception& e)
     {
@@ -77,7 +72,7 @@ Server::readRequest(RawRequest * request, SocketPtr socket)
 }
 
 int
-Server::waitForRequest(RawRequest * request, short port)
+Server::waitForRequest(Frame * frame, short port)
 {
     TRACE("Server.cpp", "Waiting for requests.");
     //boost::asio::io_service io_service;
@@ -90,7 +85,7 @@ Server::waitForRequest(RawRequest * request, short port)
 
         TRACE("Server.cpp", "Request received.");
 
-        int err = readRequest(request, sock);
+        int err = readRequest(frame, sock);
 
         return err;
     }
