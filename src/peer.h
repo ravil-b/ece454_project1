@@ -15,6 +15,8 @@
 #ifndef PEER_H
 #define PEER_H
 
+#define LOCAL_STORAGE_PATH_NAME "./localStorage/"
+
 #include <string>
 #include "Cli.h"
 
@@ -49,6 +51,10 @@ public:
 
     int initLocalPeer();
     int initRemotePeer();
+
+    int getPeerNumber();
+    string getIp();
+    string getPort();
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -87,9 +93,11 @@ class Peers : public CliCmdHandler {
     
     // You will likely want to add methods such as visit()
     void handleCmd(vector<string> *cmd);
+    void addPeer(Peer * newPeer);
+    void removePeer(Peer * peer);
 
  private:
-    void initPeer(int peerNumber, string ip, string port);
+
 
     string peersFile_;
     int numPeers_;
@@ -147,6 +155,9 @@ const int errPeerNotFound      =  5; // Cannot find some peer; warning, since ot
 const int errPeersFileNotFound = -6; // Cannot find the peers file.
 const int errPeersFileReadFail = -7; // Cannot read the peers file.
 const int errPeersFileFmtFail  = -7; // The peers file has wrong format.
+
+const int errInsertFileNotFound    = -8; // can't find the file to insert.
+const int errCannotCopyInsertFile  = -9; // something went wrong copying the file to be inserted
 
 // please add as necessary
 
