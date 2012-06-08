@@ -15,7 +15,7 @@ CXXFLAGS = -Wall
 LFLAGS = -Wall
 
 LIBS = -lboost_system
-OBJS = main.o Cli.o Client.o Server.o peer.o ThreadSafeQueue.o
+OBJS = main.o Cli.o Client.o Server.o peer.o Connection.o
 
 PROJECT_NAME = ece454_project1
 
@@ -60,8 +60,8 @@ $(OUT_DIR)/Server.o: Server.h Server.cpp
 $(OUT_DIR)/peer.o: peer.h peer.cpp
 	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/peer.o peer.cpp
 
-$(OUT_DIR)/ThreadSafeQueue.o: ThreadSafeQueue.h ThreadSafeQueue.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/ThreadSafeQueue.o ThreadSafeQueue.cpp
+$(OUT_DIR)/Connection.o: Connection.h Connection.cpp ThreadSafeQueue.h
+	$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Connection.o Connection.cpp
 
 # clean and debug targets
 .PHONY : clean debug
