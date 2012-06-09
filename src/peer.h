@@ -18,6 +18,7 @@
 #define LOCAL_STORAGE_PATH_NAME "./localStorage/"
 
 #include <string>
+#include <map>
 #include "Cli.h"
 #include "Frames.h"
 #include "Globals.h"
@@ -63,8 +64,11 @@ private:
     int peerNumber_;
     string ipAddress_;
     string port_;
+    vector<LocalFileInfo> fileList_;
+    map<int, int> peerChunkCount_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
     Peers *peers_;
+
     boost::thread *incomingConnectionsThread_;
 
     void acceptConnections();
@@ -95,11 +99,13 @@ class Peers : public CliCmdHandler {
     void addPeer(Peer * newPeer);
     void removePeer(Peer * peer);
     Peer ** getPeers();
+    int getPeerCount();
  private:
 
     string peersFile_;
     int numPeers_;
     Peer *peers_[maxPeers];
+    int peerCount_;
 };
 
 
@@ -118,6 +124,14 @@ public:
     int   minimumReplicationLevel(int fileNumber); // Use -1 to indicate if the file requested is not present in the system
     float averageReplicationLevel(int fileNumber); // Use -1 to indicate if the file requested is not present in the system
     
+    void setNumFiles(char numFiles);
+
+    void setLocalFilePresence(char fileNum, float fractionPresentLocally);
+    void setSystemFilePresence(char fileNum, float fractionPresentInSystem);
+
+    void setLeastReplication(char fileNum, int totalChunkCountInAllPeers);
+    void setWeightedLeastReplication(char fileNum, float totalChunkFractionInAllPeers);
+
 private:
     // This is very cheesy and very lazy, but the focus of this assignment
     // is not on dynamic containers but on the BT p2p file distribution

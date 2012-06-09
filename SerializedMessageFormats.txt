@@ -14,15 +14,34 @@ Serialized Message Formats
 ------------------------------------
 |     char    |  char   |   int    |
 
+// CHUNK_REQUEST_DECLINE
+
+| messageType | fileNum | chunkNum |
+------------------------------------
+|     char    |  char   |   int    |
+
+
+// CHUNK_COUNT
+
+| messageType | fileNum | chunkCount |
+--------------------------------------
+|     char    |  char   |    int     |
+
+
+// CHUNK_COUNT_REQUEST
+
+| messageType | fileNum |
+-------------------------
+|     char    |  char   |
 
 
 // FILE_LIST
 
-| messageType | fileCount |  file1Num |  file1ChunkCount |  file1Name  |  file2Num  |  ...
----------------------------------------------------------------------------------------
-|     char    |    char   |    char   |       int        |  char[512]  |    char    |  ... 
+| messageType | fileCount |  file1Num |  file1TotalChunkCount |  file1ChunkCountAtPeer |  file1Name  |  file2Num  |  ...
+--------------------------------------------------------------------------------------------------------------------------
+|     char    |    char   |    char   |          int          |           int          |  char[512]  |    char    |  ... 
 
-Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 files with this 512byte fileName standard
+Max # of files = floor(65541 / (512 + 1 + 4 + 4)) = 125    -- so we can fit all 100 files with this 512byte fileName standard
 
 
 

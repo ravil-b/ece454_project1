@@ -4,21 +4,20 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include "Globals.h"
+#include "Files.h"
 
 const int FRAME_LENGTH = 65542;
 const short MAX_FILE_NAME_LENGTH = 512;
 
-enum FrameType
-{
-    CHUNK = 0,
-    CHUNK_REQUEST = 1,
-    FILE_LIST = 2,
-    FILE_LIST_REQUEST = 3,
-    FILE_LIST_DECLINE = 4,
-    NEW_FILE_AVAILABLE = 5,
-    NEW_CHUNK_AVAILABLE = 6
-};
+
+//                                           fileNum        totalChunks    totalChunksAtPeer            fileName
+const short FILE_INFO_DATA_WIDTH =          sizeof(char) +  sizeof(int) +   sizeof(int)      +   MAX_FILE_NAME_LENGTH;
+const short TOTAL_CHUNKS_AT_SOURCE_OFFSET =   sizeof(char) +  sizeof(int);
+
+
+
 
 // FILE_LIST_DECLINE:
 // If a server connects, asks for the file_list, and is waiting, and during this waiting time another server connects and
@@ -32,53 +31,98 @@ enum FrameType
 //
 // See ../SerializedMessageFormats.txt to see how these structs are serialized
 
-struct FileInfo // stores info about a file
+struct FrameType
 {
-    std::string fileName;
-    char fileNum;
-    int chunkCount;
+    enum FrameType_T
+    {
+        CHUNK = 0,
+        CHUNK_REQUEST = 1,
+        CHUNK_REQUEST_DECLINE = 2,
+
+        CHUNK_COUNT_REQUEST = 3,
+        CHUNK_COUNT = 4,
+
+        FILE_LIST = 5,
+        FILE_LIST_REQUEST = 6,
+        FILE_LIST_DECLINE = 7,
+
+        NEW_FILE_AVAILABLE = 8,
+        NEW_CHUNK_AVAILABLE = 9
+    };
 };
 
 struct Frame
 {
     char serializedData[FRAME_LENGTH];
     char getFrameType();
+    void setFrameType(FrameType frameType);
+
+
 
 };
 
-
-struct ChunkFrame : Frame
+struct FileNumFrame: Frame
 {
+    FileNumFrame(char fileNum);
     char getFileNum();
+};
+
+
+struct ChunkFrame : FileNumFrame
+{
+    ChunkFrame(char fileNum, int chunkNum);
     int getChunkNum();
 };
 
 struct ChunkDataFrame : ChunkFrame
 {
+    ChunkDataFrame(char fileNum, int chunkNum, char* chunk);
     char * getChunk();
+    void setChunk(char * chunk);
 };
 
-struct ChunkRequestFrame : ChunkFrame{};
-struct NewChunkAvailableFrame: ChunkFrame{};
+struct ChunkRequestFrame : ChunkFrame{
+    ChunkRequestFrame(char fileNum, int chunkNum);
+};
+struct ChunkRequestDeclineFrame : ChunkFrame{
+    ChunkRequestDeclineFrame(char fileNum, int chunkNum);
+};
 
+struct ChunkCountFrame: FileNumFrame
+{
+    ChunkCountFrame(char fileNum, int chunkCount);
+    int getChunkCount();
+};
+struct ChunkCountRequestFrame: FileNumFrame{
+    ChunkCountRequestFrame(char fileNum, int chunkCount);
+};
 
 
 
 struct FileListFrame: Frame
 {
+    FileListFrame(char fileCount, std::vector<RemoteFileInfo> fileInfos);
     char getFileCount();
-    std::vector<FileInfo> getFileInfos();
+
+    std::vector<RemoteFileInfo> getFileInfos();
 
 private:
-    std::vector<FileInfo> * fileInfos_;
+    void parseFileInfos();
+    std::vector<RemoteFileInfo> * fileInfos_;
 };
-struct FileListRequestFrame: Frame{};
-struct FileListDeclineFrame: Frame{};
+struct FileListRequestFrame: Frame{
+    FileListRequestFrame();
+};
+struct FileListDeclineFrame: Frame{
+    FileListDeclineFrame();
+};
 
 
 struct NewFileAvailableFrame: Frame
 {
     FileInfo getFileInfo();
 };
+struct NewChunkAvailableFrame: ChunkFrame{};
+
 
 #endif

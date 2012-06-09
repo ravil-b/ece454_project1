@@ -83,6 +83,7 @@ Peers::addPeer(Peer * newPeer){
     	return;
     }
     peers_[newPeer->getPeerNumber()] = newPeer;
+    peerCount_++;
 }
 
 void
@@ -95,6 +96,7 @@ Peers::removePeer(Peer * peer)
     }
     delete peers_[peer->getPeerNumber()];
     peers_[peer->getPeerNumber()] = NULL;
+    peerCount_--;
 }
 
 void 
@@ -107,6 +109,12 @@ Peer **
 Peers::getPeers()
 {
     return peers_;
+}
+
+int
+Peers::getPeerCount()
+{
+    return peerCount_;
 }
 
 /*
@@ -187,9 +195,58 @@ int Peer::insert(string fileName)
     return errOK;
 }
 
-int Peer::query(Status& status)
+int
+Peer::query(Status& status)
 {
+    status.setNumFiles(fileList_.size());
 
+    for (int fileIdx; fileIdx < (int)fileList_.size(); fileIdx++)
+    {
+        LocalFileInfo file = fileList_.at(fileIdx);
+
+        // _local
+        int totalChunksPresentLocally = 0;
+        for (int chunkIdx = 0; chunkIdx < file.chunkCount; chunkIdx++)
+        {
+            if (file.chunksDownloaded[chunkIdx] == true)
+                totalChunksPresentLocally++;
+        }
+
+
+        float localFilePresence = (float)totalChunksPresentLocally / (float)file.chunkCount;
+        status.setLocalFilePresence(file.fileNum, localFilePresence);
+
+
+        // _system
+        int maxPeerChunkCount = 0;
+        int totalChunkCountInAllPeers = 0;
+        for (int peerIdx; peerIdx < peers_->getPeerCount(); peerIdx++)
+        {
+            Peer * peer = peers_->getPeers()[peerIdx];
+            if (peer->getPeerNumber() == this->getPeerNumber()) continue;
+
+            int chunkCount = peerChunkCount_[peer->getPeerNumber()];
+
+            totalChunkCountInAllPeers += chunkCount;
+            if (chunkCount > maxPeerChunkCount)
+            {
+                maxPeerChunkCount = chunkCount;
+            }
+        }
+
+        float systemFilePresence = (float)maxPeerChunkCount / (float)file.chunkCount;
+        status.setSystemFilePresence(file.fileNum, systemFilePresence);
+
+        // _leastReplication
+        status.setLeastReplication(file.fileNum, totalChunkCountInAllPeers);
+
+        // _weightedLeastReplication
+        float totalChunkFraction = (float)totalChunkCountInAllPeers / (float)file.chunkCount;
+        status.setWeightedLeastReplication(file.fileNum, totalChunkFraction);
+
+    }
+
+    return errOK;
 }
 
 
@@ -208,6 +265,16 @@ int Peer::leave()
 
 int Peer::join()
 {
+    // request a file list from a peer
+    FileListRequestFrame frame;
+
+
+
+    // if peer doesn't return a FILE_LIST_DECLINE,
+        // update local file list
+
+
+
     peers_->addPeer(this);
     return errOK;
 }

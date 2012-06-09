@@ -8,8 +8,8 @@
 #ifndef FILECHUNKIO_H_
 #define FILECHUNKIO_H_
 
-#import <string>
-#import <vector>
+#include <string>
+#include <vector>
 
 class FileChunkIO
 {
