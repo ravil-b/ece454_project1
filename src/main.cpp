@@ -47,12 +47,21 @@ Temp::handleCmd(std::vector<std::string> *cmd){
 // CLI Example end
 
 void
-consumer(ThreadSafeQueue<Frame *> *tq, int num){
+consumer(ThreadSafeQueue<Request> *tq, int num, Connection *c){
     std::cout << "CONSUMER" << num << " begin" << std::endl;
-    Frame *res;
-    while(tq->pop(&res)){
-	std::cout << "consumer" << num << " << " << res->serializedData << std::endl;
-	delete res;
+    Request req;
+    while(tq->pop(&req)){
+	std::cout << "consumer" << num << " reqId: " << req.requestId << " << " << req.frame->serializedData << std::endl;
+	delete req.frame;
+
+	
+	// try sending back somthing
+	char buff[20];
+	Frame *newFrame = new Frame();
+	sprintf(buff, "Consumer %d says hi! ", num);
+	strcpy(newFrame->serializedData, buff);
+	ThreadSafeQueue<Frame *> *rq = c->getReplyQueue(req.requestId);
+	rq->push(newFrame);
     }
     std::cout << "CONSUMER" << num << " end" <<std::endl;
 }
@@ -131,12 +140,17 @@ main(int argc, char* argv[]){
     //Peers *peers = new Peers(cli, "peers.txt");
     //boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
     
-    ThreadSafeQueue<Frame *> *rq = new ThreadSafeQueue<Frame *>();
-    boost::thread consumerThread1(boost::bind(&consumer, rq, 1));
-    ThreadSafeQueue<Frame *> *sq = new ThreadSafeQueue<Frame *>();
-    boost::thread producerThread1(boost::bind(&producer, sq, 1));
+
+
+
     //boost::thread producerThread1(boost::bind(&producer, tq, 1));
     Connection *c = new Connection();
+
+    ThreadSafeQueue<Request> *rq = new ThreadSafeQueue<Request>();
+    boost::thread consumerThread1(boost::bind(&consumer, rq, 1, c));
+    ThreadSafeQueue<Frame *> *sq = new ThreadSafeQueue<Frame *>();
+    boost::thread producerThread1(boost::bind(&producer, sq, 1));
+
     std::cout << "Starting server.. " << std::endl;
     c->startServer("4567", rq);
     std::cout << "Starting server returned  " << std::endl;
@@ -147,6 +161,9 @@ main(int argc, char* argv[]){
     ThreadSafeQueue<Frame *> *sq2 = new ThreadSafeQueue<Frame *>();
     boost::thread producerThread2(boost::bind(&producer, sq2, 2));
     c->connect("localhost", "4569", 2, sq2);
+
+
+
 
     // CLI Handler Example begin
     // Temp *temp = new Temp(cli);
