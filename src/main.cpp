@@ -75,9 +75,13 @@ producer(ThreadSafeQueue<Frame *> *tq, int num){
 	char buff[20];
 	Frame *newFrame = new Frame();
 	sprintf(buff, "%d", i+(num*20));
-	strcpy(newFrame->serializedData, buff);
+	for(int i = 0; i < FRAME_LENGTH - 1; i++){
+	    newFrame->serializedData[i] = 'A';
+	}
+	newFrame->serializedData[FRAME_LENGTH - 1] = 0;
+	//strcpy(newFrame->serializedData, buff);
 	tq->push(newFrame);
-	sleep(1);
+	sleep(20);
     }
     tq->stopReading();
     std::cout << "PRODUCER" << num << " end" << std::endl;
@@ -155,14 +159,16 @@ main(int argc, char* argv[]){
     c->startServer("4567", rq);
     std::cout << "Starting server returned  " << std::endl;
     
-    c->connect("localhost", "4568", 2, sq);
+    unsigned int sessionId1;
+    unsigned int sessionId2;
+    c->connect("localhost", "4569", &sessionId1, sq);
 
-    sleep(6);
     ThreadSafeQueue<Frame *> *sq2 = new ThreadSafeQueue<Frame *>();
     boost::thread producerThread2(boost::bind(&producer, sq2, 2));
-    c->connect("localhost", "4569", 2, sq2);
+    c->connect("localhost", "4569", &sessionId2, sq2);
 
-
+    sleep(6);
+    c->endSession(sessionId1);
 
 
     // CLI Handler Example begin
