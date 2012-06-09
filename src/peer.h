@@ -20,7 +20,6 @@
 #include <string>
 #include "Cli.h"
 #include "Frames.h"
-#include "Server.h"
 #include "Globals.h"
 
 using namespace std;
@@ -29,8 +28,6 @@ using namespace std;
 
 class Status;
 class Peers;
-class Server;
-class Client;
 namespace boost{
     class thread;
 };
@@ -67,8 +64,6 @@ private:
     string ipAddress_;
     string port_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
-    Client *client_;
-    Server *server_;
     Peers *peers_;
     boost::thread *incomingConnectionsThread_;
 

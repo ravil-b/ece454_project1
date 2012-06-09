@@ -20,8 +20,8 @@ Entry point of the application.
 #include <boost/thread.hpp>
 #include "debug.h"
 #include "Cli.h"
-#include "Client.h"
-#include "Server.h"
+//#include "Client.h"
+//#include "Server.h"
 #include "peer.h"
 
 #include "ThreadSafeQueue.h"
@@ -45,12 +45,12 @@ Temp::handleCmd(std::vector<std::string> *cmd){
 // CLI Example end
 
 void
-consumer(ThreadSafeQueue<int> *tq, int num){
+consumer(ThreadSafeQueue<Frame *> *tq, int num){
     std::cout << "CONSUMER" << num << " begin" << std::endl;
-    int res;
+    Frame *res;
     while(tq->pop(&res)){
-	sleep(1);
-	std::cout << "consumer" << num << " << " << res << std::endl;
+	std::cout << "consumer" << num << " << " << res->serializedData << std::endl;
+	delete res;
     }
     std::cout << "CONSUMER" << num << " end" <<std::endl;
 }
@@ -80,15 +80,16 @@ main(int argc, char* argv[]){
     Cli *cli = new Cli();
     boost::thread cliThread(boost::bind(&Cli::run, cli));
 
-    Peers *peers = new Peers(cli, "peers.txt");
-    boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
+    //Peers *peers = new Peers(cli, "peers.txt");
+    //boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
     
-    ThreadSafeQueue<std::string> *tq = new ThreadSafeQueue<std::string>();
-    //boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
-    boost::thread producerThread1(boost::bind(&producer, tq, 1));
+    ThreadSafeQueue<Frame *> *tq = new ThreadSafeQueue<Frame *>();
+    boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
+    //boost::thread producerThread1(boost::bind(&producer, tq, 1));
     Connection *c = new Connection();
-    c->connectRemote("localhost", "4567");
-    c->send(tq);
+    std::cout << "Starting server.. " << std::endl;
+    c->startServer("4567", tq);
+    std::cout << "Starting server returned  " << std::endl;
 
     // CLI Handler Example begin
     // Temp *temp = new Temp(cli);

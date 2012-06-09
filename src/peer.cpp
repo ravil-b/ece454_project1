@@ -6,8 +6,6 @@
 
 #include "debug.h"
 #include "peer.h"
-#include "Client.h"
-#include "Server.h"
 #include "Frames.h"
 
 #include <vector>
@@ -120,8 +118,6 @@ Peer::Peer(int peerNumber, string ip, string port)
       ipAddress_(ip),
       port_(port),
       state_(UNKNOWN), 
-      client_(NULL), 
-      server_(NULL), 
       incomingConnectionsThread_(NULL){
 
     if (peerNumber == 0){
@@ -133,12 +129,6 @@ Peer::Peer(int peerNumber, string ip, string port)
 } 
 
 Peer::~Peer(){
-    if (client_ != NULL){
-        delete client_;
-    }
-    if (server_ != NULL){
-        delete server_;
-    }
 }
 
 int 
@@ -147,7 +137,7 @@ Peer::initLocalPeer(){
     // The local peer will use a server and a client.
     // At startup, we only need a server though.
     state_ = INITIALIZING;
-    server_ = new Server();
+    //    server_ = new Server();
     
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
     return errOK;
@@ -168,9 +158,9 @@ Peer::acceptConnections(){
     }
     while(true){
         Frame request;
-	    server_->waitForRequest(&request, port);
-	    TRACE("peer.cpp", "Request Data:");
-	    TRACE("peer.cpp", request.serializedData);
+	//server_->waitForRequest(&request, port);
+	TRACE("peer.cpp", "Request Data:");
+	TRACE("peer.cpp", request.serializedData);
     }
 }
 
