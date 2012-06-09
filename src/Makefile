@@ -45,7 +45,7 @@ $(EXEC) : $(OUT_OBJS)
 
 # Compiling
 # This is all very manual and tedious... If have time, implement auto prereqs.
-$(OUT_DIR)/main.o: main.cpp Client.h Server.h Cli.h peer.h ThreadSafeQueue.h
+$(OUT_DIR)/main.o: main.cpp Cli.h peer.h ThreadSafeQueue.h Connection.h
 	$(CXX) $(CXXFLAGS) $(DEFINES) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/main.o main.cpp
 
 $(OUT_DIR)/Cli.o: Cli.h Cli.cpp
