@@ -58,15 +58,17 @@ consumer(ThreadSafeQueue<Frame *> *tq, int num){
 }
 
 void
-producer(ThreadSafeQueue<std::string> *tq, int num){
+producer(ThreadSafeQueue<Frame *> *tq, int num){
     sleep(3);
     std::cout << "PRODUCER" << num << " begin" << std::endl;
-    for (int i = 0 ; i < 20; i++){
+    for (int i = 0 ; i < 20000000; i++){
 	std::cout << "producer" << num << " << " << i + (num * 20) << std::endl;
 	char buff[20];
+	Frame *newFrame = new Frame();
 	sprintf(buff, "%d", i+(num*20));
-	std::string tmp = buff;
-	tq->push(tmp);
+	strcpy(newFrame->serializedData, buff);
+	tq->push(newFrame);
+	sleep(1);
     }
     tq->stopReading();
     std::cout << "PRODUCER" << num << " end" << std::endl;
@@ -79,8 +81,8 @@ main(int argc, char* argv[]){
     TRACE("main.cpp", "Initializing CLI");
 
     // Initialize Cli and run it in a separate thread.
-    //Cli *cli = new Cli();
-    //boost::thread cliThread(boost::bind(&Cli::run, cli));
+    Cli *cli = new Cli();
+    boost::thread cliThread(boost::bind(&Cli::run, cli));
 
 
     // FileChunkIO * fileChunkIO = new FileChunkIO();
@@ -129,13 +131,22 @@ main(int argc, char* argv[]){
     //Peers *peers = new Peers(cli, "peers.txt");
     //boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
     
-    ThreadSafeQueue<Frame *> *tq = new ThreadSafeQueue<Frame *>();
-    boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
+    ThreadSafeQueue<Frame *> *rq = new ThreadSafeQueue<Frame *>();
+    boost::thread consumerThread1(boost::bind(&consumer, rq, 1));
+    ThreadSafeQueue<Frame *> *sq = new ThreadSafeQueue<Frame *>();
+    boost::thread producerThread1(boost::bind(&producer, sq, 1));
     //boost::thread producerThread1(boost::bind(&producer, tq, 1));
     Connection *c = new Connection();
     std::cout << "Starting server.. " << std::endl;
-    c->startServer("4567", tq);
+    c->startServer("4567", rq);
     std::cout << "Starting server returned  " << std::endl;
+    
+    c->connect("localhost", "4568", 2, sq);
+
+    sleep(6);
+    ThreadSafeQueue<Frame *> *sq2 = new ThreadSafeQueue<Frame *>();
+    boost::thread producerThread2(boost::bind(&producer, sq2, 2));
+    c->connect("localhost", "4569", 2, sq2);
 
     // CLI Handler Example begin
     // Temp *temp = new Temp(cli);
@@ -167,7 +178,7 @@ main(int argc, char* argv[]){
 
     // Cli::run() returns when the user types "quit" in terminal
     // TODO make sure the client gracefully shutsdown...
-    //cliThread.join();
+    cliThread.join();
     
     return 0;
 }
