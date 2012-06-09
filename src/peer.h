@@ -55,8 +55,8 @@ public:
     string getIpAddress();
     string getPort();
 
-    int broadcastFrame(Frame message);
-    int sendFrame(Frame message, Peer* toPeer);
+    int broadcastFrame(Frame * message);
+    int sendFrame(Frame * message, Peer* toPeer);
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -68,6 +68,9 @@ private:
     map<int, int> peerChunkCount_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
     Peers *peers_;
+
+    static ThreadSafeQueue<Frame *> * sq = new ThreadSafeQueue<Frame *>();
+
 
     boost::thread *incomingConnectionsThread_;
 

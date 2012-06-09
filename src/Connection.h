@@ -19,6 +19,8 @@ TCP/IP Sockets Client
 #define CONNECTION_ERR_REFUSED    -1
 #define CONNECTION_ERR            -2
 
+#define DEFAULT_PORT            5555
+
 class Frame;
 class Connection;
 

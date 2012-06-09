@@ -266,7 +266,7 @@ int Peer::leave()
 int Peer::join()
 {
     // request a file list from a peer
-    FileListRequestFrame frame;
+    FileListRequestFrame * frame = new FileListRequestFrame();
 
 
 
@@ -297,10 +297,14 @@ Peer::broadcastFrame(Frame frame)
 }
 
 int
-Peer::sendFrame(Frame frame, Peer * toPeer)
+Peer::sendFrame(Frame * frame, Peer * toPeer)
 {
     try{
         // this.client.sendMessage(peer.getIpAddress(), frame.data)
+        Connection *c = new Connection();
+        sq->push(frame);
+
+
     }
     catch (std::exception& e)
     {
