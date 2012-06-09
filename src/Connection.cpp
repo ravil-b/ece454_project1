@@ -1,4 +1,4 @@
-#include <cstdlib>
+ #include <cstdlib>
 
 #include <boost/bind.hpp>
 
@@ -71,8 +71,7 @@ Session::~Session(){
 	startWriteThread_->join();
 	delete startWriteThread_;
     }
-    // TODO
-    //connection_->removeSession(sessionId_);
+    connection_->removeSession(sessionId_);
 }
 
 tcp::socket *
@@ -113,6 +112,7 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
     if (!error){
 	if (bytesTransferred != (unsigned)FRAME_LENGTH){
 	    std::cerr << "Received incomplete frame" << std::endl;
+	    std::cerr << "Received " << bytesTransferred << " bytes " << std::endl;
 	    Request newRequest;
 	    newRequest.requestId = sessionId_;
 	    newRequest.frame = incomingFrame_;
@@ -223,7 +223,8 @@ void
 Server::handleAccept(boost::shared_ptr<Session> newSession, const boost::system::error_code& error){
     TRACE("Connection.cpp", "Accepting a connection");
     if (!error){
-	newSession->setSendQ(connection_->addSession(newSession->sessionId()));
+	newSession->setSendQ(connection_->addSession(newSession->sessionId(),
+						     newSession));
 	newSession->start();
 	unsigned int sessionId = connection_->generateSessionId();
 	newSession = Session::create(sessionId, connection_, ioService_, receiveQ_);
@@ -270,7 +271,7 @@ Connection::startServer(const std::string &port, ThreadSafeQueue<Request> *recei
 
 int
 Connection::connect(const std::string &ip, const std::string &port,
-		    int peerId, ThreadSafeQueue<Frame *> *sendQ){
+		    unsigned int *sessionId, ThreadSafeQueue<Frame *> *sendQ){
     TRACE("Connection.cpp", "Connecting to socket.");
     int retVal = CONNECTION_OK;
 
@@ -296,8 +297,10 @@ Connection::connect(const std::string &ip, const std::string &port,
 	delete newSocket;
 	return retVal;
     }
-    boost::shared_ptr<Session> newSession = Session::create(generateSessionId(), this, 
+    *sessionId = generateSessionId();
+    boost::shared_ptr<Session> newSession = Session::create(*sessionId, this, 
 							    newSocket, receiveQ_, sendQ);
+    sessionIdAndSessionMap_.insert(std::make_pair(*sessionId, newSession));
     newSession->start();
     return retVal;
 }
@@ -309,13 +312,14 @@ Connection::generateSessionId(){
 }
 
 ThreadSafeQueue<Frame *> *
-Connection::addSession(unsigned int sessionId){
+Connection::addSession(unsigned int sessionId, boost::shared_ptr<Session> session){
     // create a new send queue 
-    // TODO delete when we're done with it.
     boost::mutex::scoped_lock lock(sessionMapMutex_);
     TRACE("Connection.cpp", "Adding a new session into the map.");
     ThreadSafeQueue<Frame *> *newQ = new ThreadSafeQueue<Frame *>;
     sessionIdAndSendQueueMap_.insert(std::make_pair(sessionId, newQ));
+    // add the session into the second map
+    sessionIdAndSessionMap_.insert(std::make_pair(sessionId, session));
     return newQ;
 }
 
@@ -334,9 +338,41 @@ Connection::getReplyQueue(unsigned int requestId){
 }
 
 void
-Connection::closeConnection(int peerId){
-    TRACE("Connection.cpp", "Closing Connection.");
-    // TODO
+Connection::removeSession(unsigned int sessionId){
+    boost::mutex::scoped_lock lock(sessionMapMutex_);
+    TRACE("Connection.cpp", "Removing a session");
+    ThreadSafeQueue<Frame *> *replyQ;
+    std::map<unsigned int, ThreadSafeQueue<Frame *> *>::iterator iter;
+    iter = sessionIdAndSendQueueMap_.find(sessionId);
+    if (iter != sessionIdAndSendQueueMap_.end()){
+	replyQ = iter->second;
+	replyQ->stopReading();
+	Frame *f;
+	while(replyQ->pop(&f)){
+	    delete f;
+	}
+	delete replyQ;
+	sessionIdAndSendQueueMap_.erase(iter);
+    }
+    // and remove it from the other map
+    std::map<unsigned int, boost::shared_ptr<Session> >::iterator iter2;
+    iter2 = sessionIdAndSessionMap_.find(sessionId);
+    if (iter2 != sessionIdAndSessionMap_.end()){
+	sessionIdAndSessionMap_.erase(iter2);
+    }
+}
+
+void
+Connection::endSession(unsigned int sessionId){
+    TRACE("Connection.cpp", "Closing Session");
+    boost::mutex::scoped_lock lock(sessionMapMutex_);
+    std::map<unsigned int, boost::shared_ptr<Session> >::iterator iter;
+    iter = sessionIdAndSessionMap_.find(sessionId);
+    if (iter != sessionIdAndSessionMap_.end()){
+	iter->second->socket()->shutdown(tcp::socket::shutdown_both);
+	iter->second->socket()->close();
+	iter->second.reset();
+    }
 }
 
 

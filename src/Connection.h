@@ -102,12 +102,13 @@ class Connection {
     ~Connection();
 
     int connect(const std::string &ip, const std::string &port, 
-		int peerId, ThreadSafeQueue<Frame *> *sendQ);
-    void closeConnection(int peerId);
+		unsigned int *sessionId, ThreadSafeQueue<Frame *> *sendQ);
+    void endSession(unsigned int sessionId);
     int startServer(const std::string &port, ThreadSafeQueue<Request> *receiveQ);
     ThreadSafeQueue<Frame *> *getReplyQueue(unsigned int requestId);
     unsigned int generateSessionId();
-    ThreadSafeQueue<Frame *> *addSession(unsigned int sessionId);
+    ThreadSafeQueue<Frame *> *addSession(unsigned int sessionId, 
+					 boost::shared_ptr<Session> session);
     void removeSession(unsigned int sessionId);
     
  private:
@@ -121,8 +122,7 @@ class Connection {
     boost::mutex sessionMapMutex_;
     // A mapping between session IDs and send queues they can use
     std::map<unsigned int, ThreadSafeQueue<Frame *> *> sessionIdAndSendQueueMap_;
-    // A mapping between session IDs and peer numbers
-    //map<unsigned int, int> sessionIdAndPeerIdMap;
+    std::map<unsigned int, boost::shared_ptr<Session> > sessionIdAndSessionMap_;
 };
 
 #endif
