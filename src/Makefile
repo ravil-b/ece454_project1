@@ -30,7 +30,7 @@ ifeq ($(PLATFORM), WIN)					# WINDOWS
 	INCLUDES = -I"C:\boost\boost_1_49_0"
 	LIBPATH = -L"C:\boost\boost_1_49_0\stage\lib"
 	WINLIBEXTENSION = -mgw46-mt-d-1_49 # minGW linker - built with MultiThreading - debug enabled - v1.49
-	LIBS =  -lboost_thread$(WINLIBEXTENSION) -lboost_system$(WINLIBEXTENSION) -lboost_filesystem$(WINLIBEXTENSION)  -lws2_32  # need to link with winsock32 as well
+	LIBS =  -lboost_thread$(WINLIBEXTENSION) -lboost_system$(WINLIBEXTENSION) -lboost_filesystem$(WINLIBEXTENSION)  -lws2_32 -lmswsock  # need to link with winsock32/mswsock as well 
 else							# LINUX
 ifneq (,$(findstring x86_64,$(shell uname -a)))		# 64bit
 	LIBS += -lboost_thread-mt -lboost_filesystem-mt
