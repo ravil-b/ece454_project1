@@ -115,6 +115,13 @@ namespace chunkInfoRequest_serialization
     createChunkInfoRequest();
 };
 
+namespace fileListRequestFrame_serialization
+{
+    Frame *
+    createFileListRequest();
+};
+
+
 struct PeerInfoFrame: Frame
 {
     PeerInfoFrame(std::string ip, std::string port);
@@ -199,3 +206,4 @@ struct ChunkInfoRequestFrame: Frame {
 };
 
 #endif
+

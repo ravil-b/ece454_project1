@@ -319,6 +319,7 @@ namespace fileListFrame_serialization{
             frame->serializedData[serialDataIdx] = file->fileNum;
             serialization_helpers::copyIntToCharArray(frame->serializedData + serialDataIdx + sizeof(char), file->chunkCount);
         }
+	return frame;
     }
 
     std::vector<FileInfo>
@@ -343,5 +344,16 @@ namespace chunkInfoRequest_serialization
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
         return newFrame;
+    }
+}
+
+namespace fileListRequestFrame_serialization
+{
+    Frame *
+    createFileListRequest()
+    {
+	Frame * newFrame = new Frame();
+	newFrame->serializedData[0] = (char)FrameType::FILE_LIST_REQUEST;
+	return newFrame;
     }
 }

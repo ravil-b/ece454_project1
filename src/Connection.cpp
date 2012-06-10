@@ -170,6 +170,7 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 void
 Session::startWrite(){
     if (sendQ_->pop(&outgoingFrame_)){
+	TRACE("Connection.cpp", "Data to write became available");
 	char buf[10];
 	sprintf(buf, "%d", outgoingFrame_->serializedData[0]);
 	std::cout << "OUT FIRST CHAR IS " << buf << std::endl;

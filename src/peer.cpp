@@ -211,13 +211,16 @@ Peer::initLocalPeer(){
     TRACE("peer.cpp", "Initializing local peer.");
 
     state_ = INITIALIZING;
-    sendq_ = new ThreadSafeQueue<Frame *>();
+    // Local peer doesn't have a send queue.
+    // Use Connection to lookup response queue
+    sendq_ = NULL;
     chunkIO_ = new FileChunkIO();
 
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
-    boost::thread serverThread(boost::bind(&Connection::startServer, 
-					   peers_->connection_, port_, receiveq_));
+    if (peers_->connection_->startServer(port_, receiveq_)){
+	cerr << "FAILED TO START THE SERVER." << endl;
+    }
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
     return errOK;
@@ -234,7 +237,7 @@ Peer::initRemotePeer(){
 	return connCode;
     }
     state_ = WAITING_FOR_HANDSHAKE;
-    TRACE("peer.cpp", "Connected to remote peer. Requesting handshake.");
+    TRACE("peer.cpp", "Connected to remote peer. WAITING_FOR_HANDSHAKE");
 
     HandshakeRequestFrame * handshakeRequest = new HandshakeRequestFrame();
     sendq_->push(handshakeRequest);
@@ -244,6 +247,18 @@ Peer::initRemotePeer(){
 
 int 
 Peer::initLocalFileStore(){
+    // Assemble the file list request frame and broadcast it to everyone
+    Frame * requestFrame = fileListRequestFrame_serialization::createFileListRequest();
+    bool frameSent = false;
+    while(!frameSent){
+	for (int i = 1; i < maxPeers; i++){
+	    if ((*peers_)[i]->state_ == ONLINE){
+		(*peers_)[i]->sendFrame(requestFrame);
+		frameSent = true;
+		break;
+	    }
+	}
+    }
     return errOK;
 }
 
@@ -257,7 +272,7 @@ Peer::acceptConnections(){
     }
     Request request;
     while(receiveq_->pop(&request)){
-        Peer::handleRequest(request);
+        handleRequest(request);
     }
 
     delete request.frame;
@@ -282,7 +297,9 @@ Peer::handleRequest(Request request)
 	    if (q == NULL){
 		std::cerr << "Cannot find the queue to send reply to peer." << std::endl;
 	    }
-            q->push(response);
+	    else{
+		q->push(response);
+	    }
         }
         break;
 
@@ -295,20 +312,18 @@ Peer::handleRequest(Request request)
             std::string framePort = frame_function::getPort(request.frame->serializedData);
 
 	    // change the status of the peer to connected.
-	    for(int i = 1; i < maxPeers; i++){
+            for(int i = 1; i < maxPeers; i++){
 
-	    	if ((strcmp((*peers_)[i]->getIpAddress().c_str(), 
-			    frameIp.c_str()) == 0) &&
-		    (strcmp((*peers_)[i]->getPort().c_str(), 
-			    framePort.c_str()) == 0)){
-	    	    TRACE("peer.cpp", "Received handshake. CONNECTED");
-	    	    (*peers_)[i]->state_ = CONNECTED;
-
-		    // Close the connection with that remote peer.
-	    	    disconnect();
-	    	    break;
-	    	}
-	    }
+                if      ((strcmp((*peers_)[i]->getIpAddress().c_str(), frameIp.c_str()) == 0) &&
+                         (strcmp((*peers_)[i]->getPort().c_str(), framePort.c_str())))
+                {
+                    TRACE("peer.cpp", "Received handshake. ONLINE");
+                    (*peers_)[i]->state_ = ONLINE;
+                    // Close the connection with that remote peer.
+                    // disconnect();
+                    break;
+                }
+            }
         }
         break;
 
@@ -347,16 +362,19 @@ Peer::handleRequest(Request request)
         case FrameType::FILE_LIST:
             // update local file list
         {
+	    cout << "File list response received" << endl;
             std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(frame);
 
             for (int i; i < fileInfos.size(); i++)
             {
                 FileInfo f = fileInfos[i];
+		cout << "Got file name" << f.fileName << endl;
+		cout << "Got file num" << f.fileNum << endl;
+		cout << "Got chunk count" << f.chunkCount << endl;
                 if (!fileList_.contains(&f))
                 {
                     FileInfo * newFile = new FileInfo(f);
                     fileList_.files.push_back(newFile);
-
                     Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
                     peers_->broadcastFrame(chunkInfoRequest, this);
                 }
@@ -374,13 +392,32 @@ Peer::handleRequest(Request request)
             // check if file list is updated
             // if so, respond with file list
                 //else : send file_list_decline
+	    cout << "File list request received" << endl;
+	    // testing
+	    std::vector<FileInfo *> fileInfos;
+	    FileInfo *f1 = new FileInfo();
+	    f1->fileName = "TestFile1";
+	    f1->fileNum = 1;
+	    f1->chunkCount = 100;
+	    fileInfos.push_back(f1);
+	    FileInfo *f2 = new FileInfo();
+	    f2->fileName = "TestFile2";
+	    f2->fileNum = 2;
+	    f2->chunkCount = 100;
+	    fileInfos.push_back(f2);
 
             Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(
                     fileList_.files.size(),
                     fileList_.files);
 
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
-            q->push(fileListFrame);
+	    std::cout << fileListFrame->serializedData[0] << std::endl;
+	    if (q != NULL){
+		q->push(fileListFrame);
+	    }
+	    else{
+		std::cerr << "Cannot find the queue to send reply to peer." << std::endl;
+	    }
         }
 
 
@@ -527,13 +564,11 @@ int Peer::join()
 int
 Peer::sendFrame(Frame * frame)
 {
-    sendq_->push(frame);
-    unsigned int sessionId;
-    if (peers_->connection_->connect(getIpAddress(), getPort(), &sessionId, sendq_) != CONNECTION_OK){
-        std::cerr << "Problem sending frame to peer #" << peerNumber_ << std::endl;
-	    return errCannotSendMessage;
+    if (connect() == errOK){
+	sendq_->push(frame);
+	return errOK;
     }
-    return errOK;
+    return errCannotSendFrame;
 }
 
 int Peer::getPeerNumber()
@@ -558,8 +593,13 @@ map<char, map<int, int> > Peer::getChunkMap()
 
 int 
 Peer::connect(){
+    // need to protect sendq pointer
+    boost::mutex::scoped_lock lock(connectionMutex_);
     // check if connection is still alive
-    if (peers_->connection_->isConnected(sessionId_)){
+    if (sendq_ != NULL && peers_->connection_->isConnected(sessionId_)){
+	cout << "Connection was alive" << endl;
+	cout << "Session ID is " << sessionId_ << endl;
+	cout << "peerNumber is " << peerNumber_ << endl;
 	return errOK;
     }
     // if not, start one
@@ -579,8 +619,12 @@ Peer::connect(){
 
 void
 Peer::disconnect(){
+    // need to protect sendq pointer
+    boost::mutex::scoped_lock lock(connectionMutex_);
     if (sendq_ != NULL){
 	peers_->connection_->endSession(sessionId_);
     }
+    // TODO remote all frames from sendq if it is not emmpty
+    delete sendq_;
     sendq_ = NULL;
 }
