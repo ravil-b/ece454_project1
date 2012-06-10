@@ -40,6 +40,7 @@ Session::Session(unsigned int sessionId, Connection *connection, boost::asio::io
       receiveQ_(receiveQ),
       sendQ_(sendQ), 
       incomingFrame_(NULL),
+      incomingFrameIndex_(0),
       outgoingFrame_(NULL),
       writeStarted_(false),
       startWriteThread_(NULL){
@@ -54,6 +55,7 @@ Session::Session(unsigned int sessionId, Connection *connection, tcp::socket *so
       receiveQ_(receiveQ),
       sendQ_(sendQ), 
       incomingFrame_(NULL),
+      incomingFrameIndex_(0),
       outgoingFrame_(NULL),
       writeStarted_(false),
       startWriteThread_(NULL){
@@ -110,19 +112,20 @@ Session::start(){
 void 
 Session::handleRead(const boost::system::error_code& error, size_t bytesTransferred){
     if (!error){
-	if (bytesTransferred != (unsigned)FRAME_LENGTH){
-	    std::cerr << "Received incomplete frame" << std::endl;
-	    std::cerr << "Received " << bytesTransferred << " bytes " << std::endl;
-	    Request newRequest;
-	    newRequest.requestId = sessionId_;
-	    newRequest.frame = incomingFrame_;
-	    receiveQ_->push(newRequest);
-	    incomingFrame_ = NULL;
+	if ((bytesTransferred + incomingFrameIndex_) < (unsigned)FRAME_LENGTH){
+	    std::cerr << "Still incomplete frame" << std::endl;
+	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
+	    incomingFrameIndex_ += bytesTransferred;
 	}
 	else{
+	    std::cerr << "Complete frame?" << std::endl;
+	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
+	    incomingFrameIndex_ = 0;
 	    Request newRequest;
 	    newRequest.requestId = sessionId_;
 	    newRequest.frame = incomingFrame_;
+	    newRequest.ip = socket()->remote_endpoint().address().to_string();
+	    newRequest.port = socket()->remote_endpoint().port();
 	    receiveQ_->push(newRequest);
 	    incomingFrame_ = NULL;
 	}

@@ -46,158 +46,74 @@ Temp::handleCmd(std::vector<std::string> *cmd){
 }
 // CLI Example end
 
+// Connection example begin
+int numConsumerCalls = 0;
 void
 consumer(ThreadSafeQueue<Request> *tq, int num, Connection *c){
     std::cout << "CONSUMER" << num << " begin" << std::endl;
     Request req;
     while(tq->pop(&req)){
-	std::cout << "consumer" << num << " reqId: " << req.requestId << " << " << req.frame->serializedData << std::endl;
+	std::cout << "CONSUMER GOT FRAME - " << ('A'+numConsumerCalls) << " ";
+	// Make sure the frame is correct
+	bool err = false;
+	int errCount = 0;
+	for(int i = 0; i < FRAME_LENGTH - 1; i++){
+	    if (req.frame->serializedData[i] != ('A' + numConsumerCalls)){
+		err = true;
+		errCount++;
+	    }
+	}
+	if (err){
+	    std::cout << "NO ERROR" << std::endl;
+	}
+	else{
+	    std::cout << errCount << " ERRORS!!!" << std::endl;
+	}
+	std::cout << "IP: " << req.ip << "    port: " << req.port << std::endl;
 	delete req.frame;
-
-	
-	// try sending back somthing
-	char buff[20];
-	Frame *newFrame = new Frame();
-	sprintf(buff, "Consumer %d says hi! ", num);
-	strcpy(newFrame->serializedData, buff);
-	ThreadSafeQueue<Frame *> *rq = c->getReplyQueue(req.requestId);
-	rq->push(newFrame);
+	numConsumerCalls++;
     }
     std::cout << "CONSUMER" << num << " end" <<std::endl;
 }
 
+int numProducerCalls = 0;
 void
 producer(ThreadSafeQueue<Frame *> *tq, int num){
     sleep(3);
     std::cout << "PRODUCER" << num << " begin" << std::endl;
     for (int i = 0 ; i < 20000000; i++){
-	std::cout << "producer" << num << " << " << i + (num * 20) << std::endl;
+	std::cout << "Producer: outputing " << ('A'+numProducerCalls) << std::endl;
 	char buff[20];
 	Frame *newFrame = new Frame();
 	sprintf(buff, "%d", i+(num*20));
 	for(int i = 0; i < FRAME_LENGTH - 1; i++){
-	    newFrame->serializedData[i] = 'A';
+	    newFrame->serializedData[i] = ('A'+numProducerCalls);
 	}
 	newFrame->serializedData[FRAME_LENGTH - 1] = 0;
-	//strcpy(newFrame->serializedData, buff);
+	numProducerCalls++;
 	tq->push(newFrame);
-	sleep(20);
+	sleep(1);
     }
     tq->stopReading();
     std::cout << "PRODUCER" << num << " end" << std::endl;
 }
-
+// Connection example end
 
 int 
 main(int argc, char* argv[]){
     TRACE("main.cpp", "Starting up.");
-    TRACE("main.cpp", "Initializing CLI");
 
     // Initialize Cli and run it in a separate thread.
+    TRACE("main.cpp", "Initializing CLI");
     Cli *cli = new Cli();
-    boost::thread cliThread(boost::bind(&Cli::run, cli));
+    boost::thread cliThread(boost::bind(&Cli::run, cli));    
 
+    // Create the peers container and make it initialize all peers
+    TRACE("main.cpp", "Initializing Peers");
+    Peers *peers = new Peers(cli, "peers.txt");
+    boost::thread peersThread(boost::bind(&Peers::initialize, peers));
 
-    // FileChunkIO * fileChunkIO = new FileChunkIO();
-
-    // char chunkData[chunkSize];
-
-    // char charMaxVal = std::numeric_limits<char>::max();
-
-    // for (int i = 0; i < chunkSize; i ++)
-    // {
-    //     chunkData[i] = ((char)i % charMaxVal);
-    // }
-
-
-    // string writeChunkString (chunkData, chunkSize);
-    // cout << "Writing chunk string: " << writeChunkString << endl;
-    // fileChunkIO->writeChunk("C:/test1", 0, chunkData);
-
-
-    // char readChunkData [chunkSize];
-    // fileChunkIO->readChunk("C:/test1", 0, readChunkData);
-
-    // cout << "Read chunk string: " << endl;
-    // for (int i = 0; i < chunkSize; i ++)
-    // {
-    //     char asciiNumber[4];
-    //     itoa((int)readChunkData[i], asciiNumber, 10);
-
-    //     cout << asciiNumber << endl;
-    // }
-
-
-
-//    Peers *peers = new Peers(cli, "peers.txt");
-//    boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
-//
-//    ThreadSafeQueue<int> *tq = new ThreadSafeQueue<int>();
-//    boost::thread consumerThread1(boost::bind(&consumer, tq, 1));
-//    boost::thread consumerThread2(boost::bind(&consumer, tq, 2));
-//    boost::thread consumerThread3(boost::bind(&consumer, tq, 3));
-//    boost::thread producerThread1(boost::bind(&producer, tq, 1));
-//    boost::thread producerThread2(boost::bind(&producer, tq, 2));
-
-
-
-    //Peers *peers = new Peers(cli, "peers.txt");
-    //boost::thread peersInitThread(boost::bind(&Peers::initialize, peers));
     
-
-
-
-    //boost::thread producerThread1(boost::bind(&producer, tq, 1));
-    Connection *c = new Connection();
-
-    ThreadSafeQueue<Request> *rq = new ThreadSafeQueue<Request>();
-    boost::thread consumerThread1(boost::bind(&consumer, rq, 1, c));
-    ThreadSafeQueue<Frame *> *sq = new ThreadSafeQueue<Frame *>();
-    boost::thread producerThread1(boost::bind(&producer, sq, 1));
-
-    std::cout << "Starting server.. " << std::endl;
-    c->startServer("4567", rq);
-    std::cout << "Starting server returned  " << std::endl;
-    
-    unsigned int sessionId1;
-    unsigned int sessionId2;
-    c->connect("localhost", "4569", &sessionId1, sq);
-
-    ThreadSafeQueue<Frame *> *sq2 = new ThreadSafeQueue<Frame *>();
-    boost::thread producerThread2(boost::bind(&producer, sq2, 2));
-    c->connect("localhost", "4569", &sessionId2, sq2);
-
-    sleep(6);
-    c->endSession(sessionId1);
-
-
-    // CLI Handler Example begin
-    // Temp *temp = new Temp(cli);
-    // Command cmd;
-    // cmd.cmdStr = "test_command";
-    // cmd.numArgs = 1;
-    // cmd.handler = temp;
-    // cli->registerCommand(cmd);
-    //delete temp;
-    // CLI Example end
-
-    // // Client test begin
-    // Client *cl = new Client();
-    // cl->connect("localhost", "4455");
-    // TRACE("main.cpp", "Sending Data:");
-    // cl->send("This is a test of the connection");
-    // TRACE("main.cpp", "Closing Connection");
-    // cl->closeConnection();
-    // // Client test end
-
-    // Server test begin
-    // Server * s = new Server();
-    // RawRequest request;
-    // s->waitForRequest(&request, 4456);
-    // TRACE("main.cpp", "Request Data:");
-    // TRACE("main.cpp", request.data);
-    // Server test end
-
 
     // Cli::run() returns when the user types "quit" in terminal
     // TODO make sure the client gracefully shutsdown...
