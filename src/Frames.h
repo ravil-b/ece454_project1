@@ -35,21 +35,24 @@ struct FrameType
 {
     enum FrameType_T
     {
-        CHUNK = 0,
-        CHUNK_REQUEST = 1,
-        CHUNK_REQUEST_DECLINE = 2,
+        HANDSHAKE_REQUEST =     0,
+        HANDSHAKE_RESPONSE =    1,
 
-        CHUNK_COUNT_REQUEST = 3,
-        CHUNK_COUNT = 4,
+        CHUNK =                 2,
+        CHUNK_REQUEST =         3,
+        CHUNK_REQUEST_DECLINE = 4,
 
-        FILE_LIST = 5,
-        FILE_LIST_REQUEST = 6,
-        FILE_LIST_DECLINE = 7,
+        CHUNK_COUNT_REQUEST =   5,
+        CHUNK_COUNT =           6,
 
-        NEW_FILE_AVAILABLE = 8,
-        NEW_CHUNK_AVAILABLE = 9,
+        FILE_LIST =             7,
+        FILE_LIST_REQUEST =     8,
+        FILE_LIST_DECLINE =     9,
 
-        CHUNK_INFO = 10
+        NEW_FILE_AVAILABLE =    10,
+        NEW_CHUNK_AVAILABLE =   11,
+
+        CHUNK_INFO =            12
     };
 };
 
@@ -61,6 +64,16 @@ struct Frame
 
 
 
+};
+
+struct HandshakeRequest : Frame
+{
+    HandshakeRequest();
+};
+
+struct HandshakeResponse : Frame
+{
+    HandshakeResponse();
 };
 
 struct FileNumFrame: Frame

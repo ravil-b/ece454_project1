@@ -60,6 +60,16 @@ FileNumFrame::getFileNum()
     return serializedData[1];
 }
 
+HandshakeRequest::HandshakeRequest()
+{
+    serializedData[0] = (char)FrameType::HANDSHAKE_REQUEST;
+}
+
+HandshakeResponse::HandshakeResponse()
+{
+    serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
+}
+
 
 ChunkFrame::ChunkFrame(char fileNum, int chunkNum): FileNumFrame(fileNum)
 {
