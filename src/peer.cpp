@@ -40,7 +40,7 @@ Peers::initialize(){
     filesystem::path p(peersFile_);
     if (!exists(p)){
 	cout << "peers.txt appears to be missing!" << endl;
-	// This currently doesn't work.
+	// TODO This currently doesn't work.
 	cli_->terminate();
 	return errPeersFileNotFound;
     }
@@ -61,7 +61,7 @@ Peers::initialize(){
 		TRACE("peer.cpp", "The peers file has wrong format");
 		return errPeersFileFmtFail;
 	    }
-	    addPeer(new Peer (lineNum, splitLine[0], splitLine[1]));
+	    addPeer(new Peer(lineNum, splitLine[0], splitLine[1], this));
 	    lineNum++;
 	}
 	if (lineNum != maxPeers){
@@ -129,11 +129,12 @@ Peers::operator[] (int i)
  * Peer
  */
 
-Peer::Peer(int peerNumber, string ip, string port)
+Peer::Peer(int peerNumber, string ip, string port, Peers *peers)
     : peerNumber_(peerNumber), 
       ipAddress_(ip),
       port_(port),
       state_(UNKNOWN), 
+      peers_(peers),
       incomingConnectionsThread_(NULL){
 
     if (peerNumber == 0){
@@ -143,10 +144,7 @@ Peer::Peer(int peerNumber, string ip, string port)
 	initRemotePeer();	
     }
 
-    receiveq_ = new ThreadSafeQueue<Request>();
 
-    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
-    chunkIO = new FileChunkIO();
 } 
 
 Peer::~Peer(){
@@ -155,16 +153,16 @@ Peer::~Peer(){
 int 
 Peer::initLocalPeer(){
     TRACE("peer.cpp", "Initializing local peer.");
-    // The local peer will use a server and a client.
-    // At startup, we only need a server though.
-    state_ = INITIALIZING;
-    //    server_ = new Server();
-    
-//    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
-    sendq_ = new ThreadSafeQueue<Frame *>();
 
-    Connection * c = new Connection();
-    c->startServer(port_, receiveq_);
+    state_ = INITIALIZING;
+    sendq_ = new ThreadSafeQueue<Frame *>();
+    chunkIO = new FileChunkIO();
+
+    peers_->connection_ = new Connection();
+    receiveq_ = new ThreadSafeQueue<Request>();
+    boost::thread connThread(boost::bind(&Connection::startServer, 
+    					 peers_->connection_, port_, receiveq_));
+    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
     return errOK;
 }
@@ -172,6 +170,10 @@ Peer::initLocalPeer(){
 
 int 
 Peer::initRemotePeer(){
+    TRACE("peer.cpp", "Initializing remote peer.");
+    // connect to the peer to see if it is online
+    state_ = INITIALIZING;
+    
     return errOK;
 }
 
@@ -182,21 +184,21 @@ Peer::acceptConnections(){
     if (port == 0){
 	// TODO Crash and burn
     }
-    Request * request;
-    while(receiveq_->pop(request)){
+    Request request;
+    while(receiveq_->pop(&request)){
         Peer::handleRequest(request);
 
     }
 
-    delete request;
+    delete request.frame;
     delete receiveq_;
 }
 
 
 void
-Peer::handleRequest(Request * request)
+Peer::handleRequest(Request request)
 {
-    switch (request->frame->getFrameType())
+    switch (request.frame->getFrameType())
     {
         case FrameType::CHUNK:
             // write the chunk to file
@@ -339,7 +341,7 @@ int Peer::join()
 {
     // request a file list from a peer
     FileListRequestFrame * frame = new FileListRequestFrame();
-    //peers_[0]->sendFrame(frame);
+    (*peers_)[0]->sendFrame(frame);
 
 
     // if peer doesn't return a FILE_LIST_DECLINE,
@@ -354,18 +356,11 @@ int Peer::join()
 int
 Peer::sendFrame(Frame * frame)
 {
-    try{
-        // this.client.sendMessage(peer.getIpAddress(), frame.data)
-        Connection *c = new Connection();
-        sendq_->push(frame);
-
-        unsigned int sessionId;
-        c->connect(getIpAddress(), getPort(), &sessionId, sendq_);
-    }
-    catch (std::exception& e)
-    {
-       std::cerr << "Problem sending frame to peer #" << getPeerNumber() << " " << e.what() << "\n";
-       return errCannotSendMessage;
+    sendq_->push(frame);
+    unsigned int sessionId;
+    if (peers_->connection_->connect(getIpAddress(), getPort(), &sessionId, sendq_) != CONNECTION_OK){
+        std::cerr << "Problem sending frame to peer #" << peerNumber_ << std::endl;
+	    return errCannotSendMessage;
     }
     return errOK;
 }

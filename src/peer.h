@@ -42,7 +42,7 @@ namespace boost{
 class Peer {
 
 public:
-    Peer(int peerNumber, string ip, string port);
+    Peer(int peerNumber, string ip, string port, Peers *peers);
     ~Peer();
 
     // This is the formal interface and you should follow it
@@ -76,11 +76,10 @@ private:
     ThreadSafeQueue<Frame *> * sendq_;
     ThreadSafeQueue<Request> * receiveq_;
 
-
     boost::thread *incomingConnectionsThread_;
 
     void acceptConnections();
-    void handleRequest(Request * request);
+    void handleRequest(Request request);
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,
@@ -109,6 +108,8 @@ class Peers : public CliCmdHandler {
     void removePeer(Peer * peer);
     Peer ** getPeers();
     int getPeerCount();
+
+    Connection *connection_;
  private:
 
     string peersFile_;
@@ -181,7 +182,7 @@ const int errInsertFileNotFound    = -8; // can't find the file to insert.
 const int errCannotCopyInsertFile  = -9; // something went wrong copying the file to be inserted
 
 const int errCannotSendMessage  = -10;
-
+const int errCannotConnectToPeer  = -11;
 
 // please add as necessary
 
