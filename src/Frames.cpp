@@ -108,8 +108,8 @@ HandshakeRequestFrame::HandshakeRequestFrame()
     serializedData[0] = (char)FrameType::HANDSHAKE_REQUEST;
 }
 
-HandshakeResponseFrame::HandshakeResponseFrame()
-{
+HandshakeResponseFrame::HandshakeResponseFrame(std::string ip, std::string port)
+    :PeerInfoFrame(ip, port){
     serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
 }
 
@@ -295,3 +295,20 @@ ChunkInfoFrame::getChunkMap()
 }
 
 
+
+namespace frame_function{
+    void setIp(std::string ip, char *serializedData){
+	strcpy(serializedData + sizeof(char), ip.c_str());
+    }
+    //copyShortToCharArray(serializedData + 16, (short)atoi(port.c_str()));
+    std::string getIp(char *serializedData)
+    {
+	return std::string(serializedData + 1, 15);	
+    }
+    std::string getPort(char *serializedData)
+    {
+	char portStr[10];
+	sprintf(portStr, "%d", parseShortFromCharArray(serializedData + 16));
+	return std::string(portStr, 5);
+    }
+}

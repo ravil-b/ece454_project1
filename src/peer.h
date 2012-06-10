@@ -61,6 +61,9 @@ public:
     int broadcastFrame(Frame * message);
     int sendFrame(Frame * frame);
 
+    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
+		 ERROR_STATE, WAITING_FOR_HANDSHAKE } state_;
+
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
 private:
@@ -69,7 +72,6 @@ private:
     string port_;
     vector<LocalFileInfo> fileList_;
     map<int, int> peerChunkCount_;
-    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
     Peers *peers_;
     FileChunkIO * chunkIO;
     // When not null, this queue indicates that a connection with a peer
