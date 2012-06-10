@@ -70,7 +70,7 @@ public:
     void disconnect();
 
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
-		 ERROR_STATE, WAITING_FOR_HANDSHAKE } state_;
+		 ERROR_STATE, WAITING_FOR_HANDSHAKE, ONLINE, OFFLINE } state_;
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -161,6 +161,8 @@ public:
 
     void setLeastReplication(char fileNum, int totalChunkCountInAllPeers);
     void setWeightedLeastReplication(char fileNum, float totalChunkFractionInAllPeers);
+
+    std::string toString(char numFiles);
 
 private:
     // This is very cheesy and very lazy, but the focus of this assignment

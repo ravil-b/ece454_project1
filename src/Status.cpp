@@ -1,4 +1,6 @@
 #include "peer.h"
+#include <sstream>
+
 
 void
 Status::setNumFiles(char numFiles)
@@ -31,3 +33,21 @@ Status::setWeightedLeastReplication(char fileNum, float totalChunkFractionInAllP
     _weightedLeastReplication[(int)fileNum] = totalChunkFractionInAllPeers;
 }
 
+std::string
+Status::toString(char numFiles)
+{
+    std::stringstream toReturn;
+    toReturn << "_numFiles: " << _numFiles << std::endl;
+
+    for (int i; i < numFiles; i++)
+    {
+        toReturn << "fileNum: " << i << std::endl;
+        toReturn << "_local: " << _local[i] << std::endl;
+        toReturn << "_system: " << _system[i] << std::endl;
+        toReturn << "_leastReplication: " << _leastReplication[i] << std::endl;
+        toReturn << "_weightedLeastReplication: " << _weightedLeastReplication[i] << std::endl;
+    }
+
+    return toReturn.str();
+
+}

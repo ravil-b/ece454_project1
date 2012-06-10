@@ -16,6 +16,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/thread.hpp>
+#include <string.h>
 
 
 
@@ -113,7 +114,37 @@ Peers::handleCmd(vector<string> *cmd){
     // the first element in cmd is the actual command
     // followed by any parameters.
     
-    return;
+    Peer * localPeer = peers_[0];
+
+    string commandStr = (*cmd)[0];
+    string insertCommandStr = "insert";
+    string queryCommandStr = "query";
+    string joinCommandStr = "join";
+    string leaveCommandStr = "leave";
+
+
+    if (strcmp(commandStr.c_str(), insertCommandStr.c_str()) == 0)
+    {
+        string filePath = (*cmd)[1];
+        localPeer->insert(filePath);
+    }
+    else if (strcmp(commandStr.c_str(), queryCommandStr.c_str()) == 0)
+    {
+        Status s;
+        localPeer->query(s);
+        TRACE("peer.cpp", "Status of local peer")
+        TRACE("peer.cpp", s.toString(localPeer->getChunkMap().size()))
+
+    }
+    else if (strcmp(commandStr.c_str(), joinCommandStr.c_str()) == 0)
+    {
+        localPeer->join();
+    }
+
+    else if (strcmp(commandStr.c_str(), leaveCommandStr.c_str()) == 0)
+    {
+        localPeer->leave();
+    }
 }
 
 
@@ -227,7 +258,6 @@ Peer::acceptConnections(){
     Request request;
     while(receiveq_->pop(&request)){
         Peer::handleRequest(request);
-	
     }
 
     delete request.frame;
@@ -245,7 +275,7 @@ Peer::handleRequest(Request request)
 
         case FrameType::HANDSHAKE_REQUEST:
         {
-            cout << "Handshake Request Received" << endl;
+            TRACE("peer.cpp" ,"Handshake Request Received");
             HandshakeResponseFrame * response = new HandshakeResponseFrame(
                 ipAddress_, port_);
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
@@ -258,26 +288,29 @@ Peer::handleRequest(Request request)
 
         case FrameType::HANDSHAKE_RESPONSE:
         {
-            cout << "Handshake Response Received" << endl;
-	    std::cout << frame_function::getIp(request.frame->serializedData) << std::endl;
-	    std::cout << frame_function::getPort(request.frame->serializedData) << std::endl;
-	    std::string frameIp = frame_function::getIp(request.frame->serializedData);
-	    std::string framePort = frame_function::getPort(request.frame->serializedData);
+            TRACE("peer.cpp" ,"Handshake Response Received");
+            std::cout << frame_function::getIp(request.frame->serializedData) << std::endl;
+            std::cout << frame_function::getPort(request.frame->serializedData) << std::endl;
+            std::string frameIp = frame_function::getIp(request.frame->serializedData);
+            std::string framePort = frame_function::getPort(request.frame->serializedData);
+
 	    // change the status of the peer to connected.
 	    for(int i = 1; i < maxPeers; i++){
+
 	    	if ((strcmp((*peers_)[i]->getIpAddress().c_str(), 
 			    frameIp.c_str()) == 0) &&
 		    (strcmp((*peers_)[i]->getPort().c_str(), 
-			    framePort.c_str()))){
-		    TRACE("peer.cpp", "Received handshake. CONNECTED");
-		    (*peers_)[i]->state_ = CONNECTED;
+			    framePort.c_str()) == 0)){
+	    	    TRACE("peer.cpp", "Received handshake. CONNECTED");
+	    	    (*peers_)[i]->state_ = CONNECTED;
+
 		    // Close the connection with that remote peer.
-		    disconnect();
-		    break;
-		}
+	    	    disconnect();
+	    	    break;
+	    	}
 	    }
         }
-            break;
+        break;
 
         case FrameType::CHUNK:
         {
@@ -286,10 +319,10 @@ Peer::handleRequest(Request request)
 
             // should check some sort of checksum..
 
-//            chunkIO_->writeChunk(
-//                    fileList_.getFileFromFileNumber(chunkDataFrame->getFileNum())->fileName,
-//                    chunkDataFrame->getChunkNum(),
-//                    chunkDataFrame->getChunk());
+        //            chunkIO_->writeChunk(
+        //                    fileList_.getFileFromFileNumber(chunkDataFrame->getFileNum())->fileName,
+        //                    chunkDataFrame->getChunkNum(),
+        //                    chunkDataFrame->getChunk());
         }
         break;
 
@@ -472,6 +505,13 @@ int Peer::join()
 {
     // request a file list from a peer
     FileListRequestFrame * frame = new FileListRequestFrame();
+
+    for (int i; i < maxPeers; i++)
+    {
+        Peer * p = (*peers_)[i];
+
+    }
+
     (*peers_)[0]->sendFrame(frame);
 
 
@@ -509,6 +549,11 @@ string Peer::getIpAddress()
 string Peer::getPort()
 {
     return port_;
+}
+
+map<char, map<int, int> > Peer::getChunkMap()
+{
+    return chunkMap_;
 }
 
 int 
