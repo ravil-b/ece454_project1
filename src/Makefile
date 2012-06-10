@@ -15,7 +15,7 @@ CXXFLAGS = -Wall
 LFLAGS = -Wall
 
 LIBS = -lboost_system
-OBJS = main.o Frames.o Cli.o peer.o FileChunkIO.o Connection.o Status.o
+OBJS = main.o Frames.o Cli.o peer.o FileChunkIO.o Connection.o Status.o Files.o
 
 PROJECT_NAME = ece454_project1
 
@@ -65,6 +65,9 @@ $(OUT_DIR)/FileChunkIO.o: FileChunkIO.h FileChunkIO.cpp
 
 $(OUT_DIR)/Status.o: peer.h Status.cpp
 	$(CXX) $(CXXFLAGS) $(DEFINES) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Status.o Status.cpp
+	
+$(OUT_DIR)/Files.o: Files.h Files.cpp
+	$(CXX) $(CXXFLAGS) $(DEFINES) $(DEBUG) $(INCLUDES) -c -o $(OUT_DIR)/Files.o Files.cpp
 
 # clean and debug targets
 .PHONY : clean debug

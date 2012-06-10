@@ -48,14 +48,13 @@ void copyShortToCharArray(char * array, short toCopy)
     array[1] = (toCopy>>8)  & 0xff;
 }
 
-RemoteFileInfo
-parseRemoteFileInfo(char * array, int startIndex)
+FileInfo
+parseFileInfo(char * array, int startIndex)
 {
-    RemoteFileInfo f;
+    FileInfo f;
 
     f.fileNum = array[startIndex];
     f.chunkCount = parseIntFromCharArray(array, startIndex + 1);
-    f.totalChunksDownloaded = parseIntFromCharArray(array, startIndex + TOTAL_CHUNKS_AT_SOURCE_OFFSET);
 
     std::string fileName (array + 2, MAX_FILE_NAME_LENGTH);
     f.fileName = fileName;
@@ -146,16 +145,6 @@ ChunkRequestDeclineFrame::ChunkRequestDeclineFrame(char fileNum, int chunkNum) :
     serializedData[0] = (char)FrameType::CHUNK_REQUEST_DECLINE;
 }
 
-ChunkCountFrame::ChunkCountFrame(char fileNum, int chunkCount): FileNumFrame(fileNum)
-{
-    serializedData[0] = (char)FrameType::CHUNK_COUNT;
-}
-
-ChunkCountRequestFrame::ChunkCountRequestFrame(char fileNum, int chunkCount): FileNumFrame(fileNum)
-{
-    serializedData[0] = (char)FrameType::CHUNK_COUNT_REQUEST;
-}
-
 char *
 ChunkDataFrame::getChunk()
 {
@@ -171,16 +160,16 @@ FileListFrame::getFileCount()
 void
 FileListFrame::parseFileInfos()
 {
-    std::vector<RemoteFileInfo> * fileInfos = new std::vector<RemoteFileInfo>();
-    for (int i = 2; i < FRAME_LENGTH - (int)3*sizeof(char); i += FILE_INFO_DATA_WIDTH)
+    std::vector<FileInfo> * fileInfos = new std::vector<FileInfo>();
+    for (int i = 2; i < FRAME_LENGTH - (int)(3*sizeof(char)); i += FILE_INFO_DATA_WIDTH)
     {
-        RemoteFileInfo f = parseRemoteFileInfo(serializedData, i);
+        FileInfo f = parseFileInfo(serializedData, i);
         fileInfos->push_back(f);
     }
     this->fileInfos_ = fileInfos;
 }
 
-std::vector<RemoteFileInfo>
+std::vector<FileInfo>
 FileListFrame::getFileInfos()
 {
     if (this->fileInfos_ == NULL)
@@ -189,17 +178,16 @@ FileListFrame::getFileInfos()
     return *this->fileInfos_;
 }
 
-FileListFrame::FileListFrame(char fileCount, std::vector<RemoteFileInfo> files)
+FileListFrame::FileListFrame(char fileCount, std::vector<FileInfo> files)
 {
     serializedData[0] = (char)FrameType::FILE_LIST;
     serializedData[1] = (char)files.size();
     for (int i; i < (int)files.size(); i++)
     {
         int serialDataIdx = 2 * sizeof(char) + (i * FILE_INFO_DATA_WIDTH);
-        RemoteFileInfo file = files[i];
+        FileInfo file = files[i];
         serializedData[serialDataIdx] = file.fileNum;
         copyIntToCharArray(serializedData + serialDataIdx + sizeof(char), file.chunkCount);
-        copyIntToCharArray(serializedData + serialDataIdx + sizeof(char) + sizeof(int), file.totalChunksDownloaded);
     }
 }
 
@@ -214,17 +202,10 @@ FileListDeclineFrame::FileListDeclineFrame()
 }
 
 
-int
-ChunkCountFrame::getChunkCount()
-{
-    return parseIntFromCharArray(serializedData, 2);
-}
-
-
 FileInfo
 NewFileAvailableFrame::getFileInfo()
 {
-    return parseRemoteFileInfo(serializedData, 1);
+    return parseFileInfo(serializedData, 1);
 }
 
 
@@ -294,4 +275,9 @@ ChunkInfoFrame::getChunkMap()
     return chunkMap;
 }
 
+
+ChunkInfoRequestFrame::ChunkInfoRequestFrame()
+{
+    serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
+}
 

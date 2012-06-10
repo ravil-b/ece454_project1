@@ -58,8 +58,11 @@ public:
     string getIpAddress();
     string getPort();
 
+    map<char, map<int, int> > getChunkMap();
+
     int broadcastFrame(Frame * message);
     int sendFrame(Frame * frame);
+    int getChunkCount(char fileNum);
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -67,14 +70,19 @@ private:
     int peerNumber_;
     string ipAddress_;
     string port_;
-    vector<LocalFileInfo> fileList_;
-    map<int, int> peerChunkCount_;
+    LocalFileInfoList fileList_;
+
+    map<char, map<int, int> > chunkMap_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
+
     Peers *peers_;
-    FileChunkIO * chunkIO;
+    FileChunkIO * chunkIO_;
+
+
     // When not null, this queue indicates that a connection with a peer
     // is established and it can be used to send the information to it.
     ThreadSafeQueue<Frame *> * sendq_;
+
     // This queue is used only if the peer is local 
     // (peer 0 in peers[]) to accept incomming requests.
     ThreadSafeQueue<Request> * receiveq_;

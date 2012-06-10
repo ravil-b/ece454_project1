@@ -158,7 +158,7 @@ Peer::initLocalPeer(){
 
     state_ = INITIALIZING;
     sendq_ = new ThreadSafeQueue<Frame *>();
-    chunkIO = new FileChunkIO();
+    chunkIO_ = new FileChunkIO();
 
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
@@ -217,7 +217,9 @@ Peer::acceptConnections(){
 void
 Peer::handleRequest(Request request)
 {
-    switch (request.frame->getFrameType())
+
+    Frame * frame = request.frame;
+    switch (frame->getFrameType())
     {
 
         case FrameType::HANDSHAKE_REQUEST:
@@ -237,46 +239,62 @@ Peer::handleRequest(Request request)
             break;
 
         case FrameType::CHUNK:
+        {
             // write the chunk to file
-            break;
+            ChunkDataFrame * chunkDataFrame = static_cast<ChunkDataFrame * >(frame);
 
-        case FrameType::CHUNK_COUNT:
-            // update chunk count list for peer
-            break;
+            // should check some sort of checksum..
 
-        case FrameType::CHUNK_COUNT_REQUEST:
-            // respond with chunk_count
-            break;
+            chunkIO_->writeChunk(
+                    fileList_.getFileFromFileNumber(chunkDataFrame->getFileNum())->fileName,
+                    chunkDataFrame->getChunkNum(),
+                    chunkDataFrame->getChunk());
+        }
+        break;
 
 
         case FrameType::CHUNK_REQUEST:
+        {
             // if we have the chunk
                 // respond with chunk
+
+            ChunkRequestFrame * chunkRequestFrame = static_cast<ChunkRequestFrame * >(frame);
+            FileInfo * file = fileList_.getFileFromFileNumber(chunkRequestFrame->getFileNum());
+
+
+        }
             break;
 
         case FrameType::CHUNK_REQUEST_DECLINE:
-
+            // update peer's chunk list to reflect that it DOES NOT have this chunk
+            // ask another peer for the chunk
             break;
 
         case FrameType::FILE_LIST:
+            // update local file list
+
+
+
 
             break;
 
         case FrameType::FILE_LIST_DECLINE:
-
+            // ask another peer for file list
             break;
 
         case FrameType::FILE_LIST_REQUEST:
-
+            // check if file list is updated
+                // if so, respond with file list
+                //else : send file_list_decline
             break;
 
         case FrameType::NEW_CHUNK_AVAILABLE:
-
-                break;
+            // update this peer's chunk list to reflect that it DOES have this chunk
+            break;
 
         case FrameType::NEW_FILE_AVAILABLE:
-
-                break;
+            // update local file list
+            break;
         default:
             break;
 
@@ -308,25 +326,35 @@ int Peer::insert(string fileName)
 }
 
 int
+Peer::getChunkCount(char fileNum)
+{
+    int totalChunks;
+    for (int i; i < chunkSize; i++)
+    {
+        totalChunks += (int)chunkMap_[fileNum][i];
+    }
+}
+
+int
 Peer::query(Status& status)
 {
-    status.setNumFiles(fileList_.size());
+    status.setNumFiles(fileList_.files.size());
 
-    for (int fileIdx; fileIdx < (int)fileList_.size(); fileIdx++)
+    for (int fileIdx; fileIdx < (int)fileList_.files.size(); fileIdx++)
     {
-        LocalFileInfo file = fileList_.at(fileIdx);
+        FileInfo * file = fileList_.files.at(fileIdx);
 
         // _local
         int totalChunksPresentLocally = 0;
-        for (int chunkIdx = 0; chunkIdx < file.chunkCount; chunkIdx++)
+        for (int chunkIdx = 0; chunkIdx < file->chunkCount; chunkIdx++)
         {
-            if (file.chunksDownloaded[chunkIdx] == true)
+            if (file->chunksDownloaded[chunkIdx] == true)
                 totalChunksPresentLocally++;
         }
 
 
-        float localFilePresence = (float)totalChunksPresentLocally / (float)file.chunkCount;
-        status.setLocalFilePresence(file.fileNum, localFilePresence);
+        float localFilePresence = (float)totalChunksPresentLocally / (float)file->chunkCount;
+        status.setLocalFilePresence(file->fileNum, localFilePresence);
 
 
         // _system
@@ -337,7 +365,7 @@ Peer::query(Status& status)
             Peer * peer = peers_->getPeers()[peerIdx];
             if (peer->getPeerNumber() == this->getPeerNumber()) continue;
 
-            int chunkCount = peerChunkCount_[peer->getPeerNumber()];
+            int chunkCount = getChunkCount(file->fileNum);
 
             totalChunkCountInAllPeers += chunkCount;
             if (chunkCount > maxPeerChunkCount)
@@ -346,15 +374,15 @@ Peer::query(Status& status)
             }
         }
 
-        float systemFilePresence = (float)maxPeerChunkCount / (float)file.chunkCount;
-        status.setSystemFilePresence(file.fileNum, systemFilePresence);
+        float systemFilePresence = (float)maxPeerChunkCount / (float)file->chunkCount;
+        status.setSystemFilePresence(file->fileNum, systemFilePresence);
 
         // _leastReplication
-        status.setLeastReplication(file.fileNum, totalChunkCountInAllPeers);
+        status.setLeastReplication(file->fileNum, totalChunkCountInAllPeers);
 
         // _weightedLeastReplication
-        float totalChunkFraction = (float)totalChunkCountInAllPeers / (float)file.chunkCount;
-        status.setWeightedLeastReplication(file.fileNum, totalChunkFraction);
+        float totalChunkFraction = (float)totalChunkCountInAllPeers / (float)file->chunkCount;
+        status.setWeightedLeastReplication(file->fileNum, totalChunkFraction);
 
     }
 

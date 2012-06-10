@@ -52,7 +52,8 @@ struct FrameType
         NEW_FILE_AVAILABLE =    10,
         NEW_CHUNK_AVAILABLE =   11,
 
-        CHUNK_INFO =            12
+        CHUNK_INFO =            12,
+        CHUNK_INFO_REQUEST =    13
     };
 };
 
@@ -111,27 +112,17 @@ struct ChunkRequestDeclineFrame : ChunkFrame{
     ChunkRequestDeclineFrame(char fileNum, int chunkNum);
 };
 
-struct ChunkCountFrame: FileNumFrame
-{
-    ChunkCountFrame(char fileNum, int chunkCount);
-    int getChunkCount();
-};
-struct ChunkCountRequestFrame: FileNumFrame{
-    ChunkCountRequestFrame(char fileNum, int chunkCount);
-};
-
-
 
 struct FileListFrame: Frame
 {
-    FileListFrame(char fileCount, std::vector<RemoteFileInfo> fileInfos);
+    FileListFrame(char fileCount, std::vector<FileInfo> fileInfos);
     char getFileCount();
 
-    std::vector<RemoteFileInfo> getFileInfos();
+    std::vector<FileInfo> getFileInfos();
 
 private:
     void parseFileInfos();
-    std::vector<RemoteFileInfo> * fileInfos_;
+    std::vector<FileInfo> * fileInfos_;
 };
 struct FileListRequestFrame: Frame{
     FileListRequestFrame();
@@ -153,6 +144,10 @@ struct ChunkInfoFrame: Frame
     ChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
     char getFileCount();
     std::map<char, std::map<int, bool> > getChunkMap();
+};
+
+struct ChunkInfoRequestFrame: Frame {
+    ChunkInfoRequestFrame();
 };
 
 #endif
