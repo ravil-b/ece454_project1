@@ -64,17 +64,19 @@ public:
     int sendFrame(Frame * frame);
     int getChunkCount(char fileNum);
 
+    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
+		 ERROR_STATE, WAITING_FOR_HANDSHAKE } state_;
+
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
 private:
     int peerNumber_;
     string ipAddress_;
     string port_;
-    LocalFileInfoList fileList_;
+    FileInfoList fileList_;
 
     map<char, map<int, int> > chunkMap_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
-
     Peers *peers_;
     FileChunkIO * chunkIO_;
 

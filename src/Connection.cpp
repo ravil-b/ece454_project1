@@ -115,6 +115,9 @@ void
 Session::handleRead(const boost::system::error_code& error, size_t bytesTransferred){
     if (!error){
 	if ((bytesTransferred + incomingFrameIndex_) < (unsigned)FRAME_LENGTH){
+	    char buf[10]; 
+	    sprintf(buf, "%d", incomingFrame_->serializedData[0]);
+	    std::cout << "FIRST CHAR IS " << buf << std::endl;
 	    std::cerr << "Still incomplete frame" << std::endl;
 	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
 	    incomingFrameIndex_ += bytesTransferred;
@@ -122,6 +125,9 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 	else{
 	    std::cerr << "Complete frame?" << std::endl;
 	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
+	    char buf[10]; 
+	    sprintf(buf, "%d", incomingFrame_->serializedData[0]);
+	    std::cout << "FIRST CHAR IS " << buf << std::endl;
 	    incomingFrameIndex_ = 0;
 	    Request newRequest;
 	    newRequest.requestId = sessionId_;
@@ -130,6 +136,7 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 	    newRequest.port = socket()->remote_endpoint().port();
 	    receiveQ_->push(newRequest);
 	    incomingFrame_ = NULL;
+	    incomingFrame_ = new Frame();
 	}
 	// We may start with only the receiving queue and then get updated with the 
 	// send queue. If we haven't started writing before, start here.
@@ -137,13 +144,14 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 	    writeStarted_ = true;
 	    startWriteThread_ = new boost::thread(boost::bind(&Session::startWrite, 
 							      shared_from_this()));
-	}
+	}		
 	
-	incomingFrame_ = new Frame();
-	socket_->async_read_some(boost::asio::buffer(incomingFrame_->serializedData, FRAME_LENGTH),
-				boost::bind(&Session::handleRead, shared_from_this(),
-					    boost::asio::placeholders::error,
-					    boost::asio::placeholders::bytes_transferred));
+	socket_->async_read_some(boost::asio::buffer(
+	    incomingFrame_->serializedData + incomingFrameIndex_, 
+	    FRAME_LENGTH - incomingFrameIndex_),
+				 boost::bind(&Session::handleRead, shared_from_this(),
+					     boost::asio::placeholders::error,
+					     boost::asio::placeholders::bytes_transferred));
 	
     }
     else{ 
@@ -161,6 +169,9 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 void
 Session::startWrite(){
     if (sendQ_->pop(&outgoingFrame_)){
+	char buf[10];
+	sprintf(buf, "%d", outgoingFrame_->serializedData[0]);
+	std::cout << "OUT FIRST CHAR IS " << buf << std::endl;
 	// data available to send
 	boost::asio::async_write(*socket_,
 				 boost::asio::buffer(outgoingFrame_->serializedData, FRAME_LENGTH),

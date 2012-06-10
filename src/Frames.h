@@ -66,6 +66,13 @@ struct Frame
 };
 
 
+namespace frame_function{
+    // IP and Port
+    std::string getIp(char *serializedData);
+    std::string getPort(char *serializedData);
+    void setIp(std::string ip, char *serializedDatxa);
+    void setPort(char *serializedData);
+};
 
 struct PeerInfoFrame: Frame
 {
@@ -80,9 +87,9 @@ struct HandshakeRequestFrame : Frame
     HandshakeRequestFrame();
 };
 
-struct HandshakeResponseFrame : Frame
+struct HandshakeResponseFrame : PeerInfoFrame
 {
-    HandshakeResponseFrame();
+    HandshakeResponseFrame(std::string ip, std::string port);
 };
 
 struct FileNumFrame: Frame

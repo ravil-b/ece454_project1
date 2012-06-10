@@ -186,8 +186,7 @@ Peer::initRemotePeer(){
 	sendq_ = NULL;
 	return errCannotConnectToPeer;
     }
-
-    state_ = CONNECTED;
+    state_ = WAITING_FOR_HANDSHAKE;
     TRACE("peer.cpp", "Connected to remote peer. Requesting handshake.");
 
     HandshakeRequestFrame * handshakeRequest = new HandshakeRequestFrame();
@@ -225,8 +224,12 @@ Peer::handleRequest(Request request)
         case FrameType::HANDSHAKE_REQUEST:
         {
             cout << "Handshake Request Received" << endl;
-            HandshakeResponseFrame * response = new HandshakeResponseFrame();
+            HandshakeResponseFrame * response = new HandshakeResponseFrame(
+                ipAddress_, port_);
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
+	    if (q == NULL){
+		std::cerr << "Cannot find the queue to send reply to peer." << std::endl;
+	    }
             q->push(response);
         }
         break;
@@ -234,7 +237,21 @@ Peer::handleRequest(Request request)
         case FrameType::HANDSHAKE_RESPONSE:
         {
             cout << "Handshake Response Received" << endl;
-            // add peer to a list of connected peers.
+	    std::cout << frame_function::getIp(request.frame->serializedData) << std::endl;
+	    std::cout << frame_function::getPort(request.frame->serializedData) << std::endl;
+	    std::string frameIp = frame_function::getIp(request.frame->serializedData);
+	    std::string framePort = frame_function::getPort(request.frame->serializedData);
+	    // change the status of the peer to connected.
+	    for(int i = 1; i < maxPeers; i++){
+	    	if ((strcmp((*peers_)[i]->getIpAddress().c_str(), 
+			    frameIp.c_str()) == 0) &&
+		    (strcmp((*peers_)[i]->getPort().c_str(), 
+			    framePort.c_str()))){
+		    TRACE("peer.cpp", "Received handshake. CONNECTED");
+		    (*peers_)[i]->state_ = CONNECTED;
+		    break;
+		}
+	    }
         }
             break;
 
