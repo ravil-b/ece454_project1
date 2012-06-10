@@ -24,6 +24,7 @@
 #include "Globals.h"
 #include "ThreadSafeQueue.h"
 #include "Connection.h"
+#include "FileChunkIO.h"
 
 using namespace std;
 
@@ -70,6 +71,7 @@ private:
     map<int, int> peerChunkCount_;
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
     Peers *peers_;
+    FileChunkIO * chunkIO;
 
     ThreadSafeQueue<Frame *> * sendq_;
     ThreadSafeQueue<Request> * receiveq_;
@@ -78,7 +80,7 @@ private:
     boost::thread *incomingConnectionsThread_;
 
     void acceptConnections();
-    void handleRequest(Request request);
+    void handleRequest(Request * request);
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,

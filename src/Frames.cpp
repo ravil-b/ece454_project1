@@ -7,6 +7,7 @@
 
 #include "Frames.h"
 #include <vector>
+#include <map>
 
 int
 parseIntFromCharArray(const char * array, int startIndex)
@@ -174,5 +175,70 @@ NewFileAvailableFrame::getFileInfo()
 }
 
 
+// Max number of chunks is 2GB / 64kB = 32768
+
+// chunkMap = { filenumber: { chunkNumber: chunkAvailable } }
+ChunkInfoFrame::ChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap)
+{
+    serializedData[0] = (char)FrameType::CHUNK_INFO;
+    serializedData[1] = fileCount;
+
+    for (char fileIdx=0; fileIdx < fileCount; fileIdx++)
+    {
+
+        for (int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
+        {
+            unsigned char b = 0;
+            b |= (chunkMap[fileIdx][chunkNum] & 1) << 8;
+            b |= (chunkMap[fileIdx][chunkNum + 1] & 1) << 7;
+            b |= (chunkMap[fileIdx][chunkNum + 2] & 1) << 6;
+            b |= (chunkMap[fileIdx][chunkNum + 3] & 1) << 5;
+            b |= (chunkMap[fileIdx][chunkNum + 4] & 1) << 4;
+            b |= (chunkMap[fileIdx][chunkNum + 5] & 1) << 3;
+            b |= (chunkMap[fileIdx][chunkNum + 6] & 1) << 2;
+            b |= (chunkMap[fileIdx][chunkNum + 7] & 1) << 1;
+            b |= (chunkMap[fileIdx][chunkNum + 8] & 1) << 0;
+
+            serializedData[chunkNum / 8] = (char)b;
+        }
+
+
+    }
+}
+
+char
+ChunkInfoFrame::getFileCount()
+{
+    return serializedData[1];
+}
+
+std::map<char, std::map<int, bool> >
+ChunkInfoFrame::getChunkMap()
+{
+    std::map<char, std::map<int, bool> > chunkMap;
+
+    for (char fileIdx; fileIdx < getFileCount(); fileIdx++)
+    {
+        std::map<int, bool> fileMap;
+
+        for (int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
+        {
+            unsigned char b = serializedData[chunkNum / 8];
+
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 8) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 7) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 6) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 5) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 4) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 3) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 2) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 1) & 1));
+            fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 0) & 1));
+        }
+
+        chunkMap.insert(std::make_pair(fileIdx, fileMap));
+    }
+    return chunkMap;
+}
 
 

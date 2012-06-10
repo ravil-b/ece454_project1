@@ -146,6 +146,7 @@ Peer::Peer(int peerNumber, string ip, string port)
     receiveq_ = new ThreadSafeQueue<Request>();
 
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+    chunkIO = new FileChunkIO();
 } 
 
 Peer::~Peer(){
@@ -193,25 +194,26 @@ Peer::acceptConnections(){
 
 
 void
-Peer::handleRequest(Request request)
+Peer::handleRequest(Request * request)
 {
-    switch (request.frame->getFrameType())
+    switch (request->frame->getFrameType())
     {
         case FrameType::CHUNK:
-
+            // write the chunk to file
             break;
 
         case FrameType::CHUNK_COUNT:
-
+            // update chunk count list for peer
             break;
 
         case FrameType::CHUNK_COUNT_REQUEST:
-
+            // respond with chunk_count
             break;
 
 
         case FrameType::CHUNK_REQUEST:
-
+            // if we have the chunk
+                // respond with chunk
             break;
 
         case FrameType::CHUNK_REQUEST_DECLINE:
@@ -233,6 +235,7 @@ Peer::handleRequest(Request request)
         case FrameType::NEW_CHUNK_AVAILABLE:
 
                 break;
+
         case FrameType::NEW_FILE_AVAILABLE:
 
                 break;
@@ -336,7 +339,7 @@ int Peer::join()
 {
     // request a file list from a peer
     FileListRequestFrame * frame = new FileListRequestFrame();
-    peers_[0]->sendFrame(frame);
+    //peers_[0]->sendFrame(frame);
 
 
     // if peer doesn't return a FILE_LIST_DECLINE,
@@ -361,7 +364,7 @@ Peer::sendFrame(Frame * frame)
     }
     catch (std::exception& e)
     {
-       std::cerr << "Problem sending frame to peer #" << toPeer->getPeerNumber() << " " << e.what() << "\n";
+       std::cerr << "Problem sending frame to peer #" << getPeerNumber() << " " << e.what() << "\n";
        return errCannotSendMessage;
     }
     return errOK;

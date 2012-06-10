@@ -37,9 +37,9 @@ Serialized Message Formats
 
 // FILE_LIST
 
-| messageType | fileCount |  file1Num |  file1TotalChunkCount |  file1ChunkCountAtPeer |  file1Name  |  file2Num  |  ...
---------------------------------------------------------------------------------------------------------------------------
-|     char    |    char   |    char   |          int          |           int          |  char[512]  |    char    |  ... 
+| messageType | fileCount |  file1Num |  file1TotalChunkCount  |  file1Name  |  file2Num  |  ...
+----------------------------------------------------------------------------------------------
+|     char    |    char   |    char   |          int           |  char[512]  |    char    |  ... 
 
 Max # of files = floor(65541 / (512 + 1 + 4 + 4)) = 125    -- so we can fit all 100 files with this 512byte fileName standard
 
@@ -74,3 +74,10 @@ Max # of files = floor(65541 / (512 + 1 + 4 + 4)) = 125    -- so we can fit all 
 | messageType |  file1Num   |  chunkNum  |
 ------------------------------------------
 |     char    |     char    |    int     |
+
+
+// CHUNK_INFO
+| messageType |  fileCount  |   fileNum1  |   chunks1    |   fileNum2  |   chunks2   | ... |   fileNum15  |   chunks15   |
+-----------------------------------------------------------------------------------------------------------
+|     char    |     char    |     char    |  byte[4096]  |     char    | byte[4096]  | ... |     char     |  byte[4096]  |
+

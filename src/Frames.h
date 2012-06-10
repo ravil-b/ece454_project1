@@ -47,7 +47,9 @@ struct FrameType
         FILE_LIST_DECLINE = 7,
 
         NEW_FILE_AVAILABLE = 8,
-        NEW_CHUNK_AVAILABLE = 9
+        NEW_CHUNK_AVAILABLE = 9,
+
+        CHUNK_INFO = 10
     };
 };
 
@@ -124,5 +126,12 @@ struct NewFileAvailableFrame: Frame
 };
 struct NewChunkAvailableFrame: ChunkFrame{};
 
+
+struct ChunkInfoFrame: Frame
+{
+    ChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
+    char getFileCount();
+    std::map<char, std::map<int, bool> > getChunkMap();
+};
 
 #endif
