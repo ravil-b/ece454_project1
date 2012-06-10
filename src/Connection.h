@@ -107,11 +107,12 @@ class Connection {
     int connect(const std::string &ip, const std::string &port, 
 		unsigned int *sessionId, ThreadSafeQueue<Frame *> *sendQ);
     void endSession(unsigned int sessionId);
+    bool isConnected(unsigned int sessionId);
     int startServer(const std::string &port, ThreadSafeQueue<Request> *receiveQ);
     ThreadSafeQueue<Frame *> *getReplyQueue(unsigned int requestId);
     unsigned int generateSessionId();
     ThreadSafeQueue<Frame *> *addSession(unsigned int sessionId, 
-					 boost::shared_ptr<Session> session);
+					 Session *session);
     void removeSession(unsigned int sessionId);
     
  private:
@@ -125,7 +126,7 @@ class Connection {
     boost::mutex sessionMapMutex_;
     // A mapping between session IDs and send queues they can use
     std::map<unsigned int, ThreadSafeQueue<Frame *> *> sessionIdAndSendQueueMap_;
-    std::map<unsigned int, boost::shared_ptr<Session> > sessionIdAndSessionMap_;
+    std::map<unsigned int, Session *> sessionIdAndSessionMap_;
 };
 
 #endif
