@@ -236,8 +236,8 @@ Peer::initRemotePeer(){
     state_ = WAITING_FOR_HANDSHAKE;
     TRACE("peer.cpp", "Connected to remote peer. WAITING_FOR_HANDSHAKE");
 
-    HandshakeRequestFrame * handshakeRequest = new HandshakeRequestFrame();
-    sendq_->push(handshakeRequest);
+    Frame * handshakeRequestFrame = handshakeRequestFrame_serialization::createHandshakeRequestFrame();
+    sendq_->push(handshakeRequestFrame);
 
     return errOK;
 }
@@ -288,15 +288,16 @@ Peer::handleRequest(Request request)
         case FrameType::HANDSHAKE_REQUEST:
         {
             TRACE("peer.cpp" ,"Handshake Request Received");
-            HandshakeResponseFrame * response = new HandshakeResponseFrame(
-                ipAddress_, port_);
+            Frame * response = handshakeResponseFrame_serialization::createHandshakeResponseFrame(ipAddress_, port_);
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
-	    if (q == NULL){
-		std::cerr << "Cannot find the queue to send reply to peer." << std::endl;
-	    }
-	    else{
-		q->push(response);
-	    }
+            if (q == NULL)
+            {
+                std::cerr << "Cannot find the queue to send reply to peer." << std::endl;
+            }
+            else
+            {
+                q->push(response);
+            }
         }
         break;
 
@@ -360,7 +361,22 @@ Peer::handleRequest(Request request)
             // update local file list
         {
 	    cout << "File list response received" << endl;
-            handleFileListFrame(frame);
+            std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(frame);
+
+            for (int i = 0; i < fileInfos.size(); i++)
+            {
+                FileInfo f = fileInfos[i];
+                cout << "Got file name" << f.fileName << endl;
+                cout << "Got file num" << f.fileNum << endl;
+                cout << "Got chunk count" << f.chunkCount << endl;
+                if (!fileList_.contains(&f))
+                {
+                    FileInfo * newFile = new FileInfo(f);
+                    fileList_.files.push_back(newFile);
+                    Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
+                    peers_->broadcastFrame(chunkInfoRequest, this);
+                }
+            }
 
         }
             break;
@@ -375,22 +391,8 @@ Peer::handleRequest(Request request)
             // if so, respond with file list
                 //else : send file_list_decline
 	    cout << "File list request received" << endl;
-	    // testing
-	    std::vector<FileInfo *> fileInfos;
-	    FileInfo *f1 = new FileInfo();
-	    f1->fileName = "TestFile1";
-	    f1->fileNum = 1;
-	    f1->chunkCount = 100;
-	    fileInfos.push_back(f1);
-	    FileInfo *f2 = new FileInfo();
-	    f2->fileName = "TestFile2";
-	    f2->fileNum = 2;
-	    f2->chunkCount = 100;
-	    fileInfos.push_back(f2);
-
-            Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(
-                    fileList_.files.size(),
-                    fileList_.files);
+            Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(	     
+                fileList_.files.size(), fileList_.files);
 
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
 	    std::cout << fileListFrame->serializedData[0] << std::endl;

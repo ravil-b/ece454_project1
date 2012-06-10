@@ -127,24 +127,27 @@ namespace fileListRequestFrame_serialization
 
 namespace handshakeRequestFrame_serialization
 {
-
+    Frame * createHandshakeRequestFrame();
 };
 
 namespace handshakeResponseFrame_serialization
 {
+    Frame * createHandshakeResponseFrame(std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
 
 };
 
 
-struct HandshakeRequestFrame : Frame
-{
-    HandshakeRequestFrame();
-};
+//struct HandshakeRequestFrame : Frame
+//{
+//    HandshakeRequestFrame();
+//};
 
-struct HandshakeResponseFrame : PeerInfoFrame
-{
-    HandshakeResponseFrame(std::string ip, std::string port);
-};
+//struct HandshakeResponseFrame : PeerInfoFrame
+//{
+//    HandshakeResponseFrame(std::string ip, std::string port);
+//};
 
 struct FileNumFrame: Frame
 {
