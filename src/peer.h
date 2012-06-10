@@ -73,10 +73,10 @@ private:
     int peerNumber_;
     string ipAddress_;
     string port_;
+
     FileInfoList fileList_;
 
     map<char, map<int, int> > chunkMap_;
-    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
     Peers *peers_;
     FileChunkIO * chunkIO_;
 
@@ -121,6 +121,7 @@ class Peers : public CliCmdHandler {
     void removePeer(Peer * peer);
     Peer ** getPeers();
     int getPeerCount();
+    void broadcastFrame(Frame * frame, Peer * fromPeer);
 
     Connection *connection_;
  private:

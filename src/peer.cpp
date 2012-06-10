@@ -107,6 +107,17 @@ Peers::handleCmd(vector<string> *cmd){
 }
 
 
+void
+Peers::broadcastFrame(Frame * frame, Peer * fromPeer){
+    for (int i; i < peerCount_; i++)
+    {
+        if (i == fromPeer->getPeerNumber()) continue;
+
+        Peer * p = peers_[i];
+        p->sendFrame(frame);
+    }
+}
+
 Peer **
 Peers::getPeers()
 {
@@ -124,6 +135,8 @@ Peers::operator[] (int i)
 {
     return peers_[i];
 }
+
+
 
 /*
  * Peer
@@ -258,14 +271,14 @@ Peer::handleRequest(Request request)
         case FrameType::CHUNK:
         {
             // write the chunk to file
-            ChunkDataFrame * chunkDataFrame = static_cast<ChunkDataFrame * >(frame);
+            //ChunkDataFrame chunkDataFrame = (ChunkDataFrame)(*frame);
 
             // should check some sort of checksum..
 
-            chunkIO_->writeChunk(
-                    fileList_.getFileFromFileNumber(chunkDataFrame->getFileNum())->fileName,
-                    chunkDataFrame->getChunkNum(),
-                    chunkDataFrame->getChunk());
+//            chunkIO_->writeChunk(
+//                    fileList_.getFileFromFileNumber(chunkDataFrame->getFileNum())->fileName,
+//                    chunkDataFrame->getChunkNum(),
+//                    chunkDataFrame->getChunk());
         }
         break;
 
@@ -289,10 +302,24 @@ Peer::handleRequest(Request request)
 
         case FrameType::FILE_LIST:
             // update local file list
+        {
 
+            std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(frame);
 
+            for (int i; i < fileInfos.size(); i++)
+            {
+                FileInfo f = fileInfos[i];
+                if (!fileList_.contains(&f))
+                {
+                    FileInfo * newFile = new FileInfo(f);
+                    fileList_.files.push_back(newFile);
 
+                    Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
+                    peers_->broadcastFrame(chunkInfoRequest, this);
+                }
+            }
 
+        }
             break;
 
         case FrameType::FILE_LIST_DECLINE:
@@ -300,9 +327,20 @@ Peer::handleRequest(Request request)
             break;
 
         case FrameType::FILE_LIST_REQUEST:
+        {
             // check if file list is updated
-                // if so, respond with file list
+            // if so, respond with file list
                 //else : send file_list_decline
+
+            Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(
+                    fileList_.files.size(),
+                    fileList_.files);
+
+            ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
+            q->push(fileListFrame);
+        }
+
+
             break;
 
         case FrameType::NEW_CHUNK_AVAILABLE:

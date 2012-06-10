@@ -11,14 +11,18 @@ struct FileInfo // stores info about a file
     char fileNum;
     int chunkCount;
     std::map<int, bool> chunksDownloaded;
+
+    FileInfo();
+    FileInfo(const FileInfo& f);
 };
 
 
-struct LocalFileInfoList
+struct FileInfoList
 {
     std::vector<FileInfo *> files;
     FileInfo * getFileFromFileNumber(char fileNumber);
     FileInfo * getFileFromFileName(std::string fileName);
+    bool contains(FileInfo * file);
 
 };
 

@@ -12,8 +12,8 @@ const int FRAME_LENGTH = 65542;
 const short MAX_FILE_NAME_LENGTH = 512;
 
 
-//                                           fileNum        totalChunks    totalChunksAtPeer            fileName
-const short FILE_INFO_DATA_WIDTH =          sizeof(char) +  sizeof(int) +   sizeof(int)      +   MAX_FILE_NAME_LENGTH;
+//                                           fileNum        totalChunks            fileName
+const short FILE_INFO_DATA_WIDTH =          sizeof(char) +  sizeof(int)    +   MAX_FILE_NAME_LENGTH;
 const short TOTAL_CHUNKS_AT_SOURCE_OFFSET =   sizeof(char) +  sizeof(int);
 
 
@@ -65,6 +65,27 @@ struct Frame
 
 };
 
+namespace serialization_helpers{
+
+    FileInfo
+    parseFileInfo(char * array, int startIndex);
+
+    int
+    parseIntFromCharArray(const char * array, int startIndex);
+
+    int
+    parseIntFromCharArray(const char * array, int startIndex);
+
+    short
+    parseShortFromCharArray(const char * array);
+
+    void
+    copyIntToCharArray(char * array, int toCopy);
+
+    void
+    copyShortToCharArray(char * array, short toCopy);
+}
+
 
 namespace frame_function{
     // IP and Port
@@ -72,6 +93,26 @@ namespace frame_function{
     std::string getPort(char *serializedData);
     void setIp(std::string ip, char *serializedDatxa);
     void setPort(char *serializedData);
+};
+
+namespace fileListFrame_serialization{
+    Frame *
+    createFileListFrame(char fileCount, std::vector<FileInfo *> files);
+    std::vector<FileInfo> getFileInfos(Frame * frame);
+    char getFileCount();
+};
+
+namespace chunkInfo_serialization
+{
+    Frame * createChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
+    char getFileCount();
+    std::map<char, std::map<int, bool> > getChunkMap();
+};
+
+namespace chunkInfoRequest_serialization
+{
+    Frame *
+    createChunkInfoRequest();
 };
 
 struct PeerInfoFrame: Frame

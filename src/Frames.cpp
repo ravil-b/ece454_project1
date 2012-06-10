@@ -12,55 +12,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int
-parseIntFromCharArray(const char * array, int startIndex)
-{
-    int toReturn = 0;
-    for (int i = startIndex; i < 4; i++)
-    {
-        toReturn = (toReturn << 8) + array[i];
-    }
-    return toReturn;
-}
 
-short
-parseShortFromCharArray(const char * array)
-{
-    short toReturn = 0;
-    for (int i = 0; i < 2; i++)
-    {
-        toReturn = (toReturn << 8) + array[i];
-    }
-    return toReturn;
-}
 
-void copyIntToCharArray(char * array, int toCopy)
-{
-    array[0] = toCopy & 0xff;
-    array[1] = (toCopy>>8)  & 0xff;
-    array[2] = (toCopy>>16) & 0xff;
-    array[3] = (toCopy>>24) & 0xff;
-}
 
-void copyShortToCharArray(char * array, short toCopy)
-{
-    array[0] = toCopy & 0xff;
-    array[1] = (toCopy>>8)  & 0xff;
-}
-
-FileInfo
-parseFileInfo(char * array, int startIndex)
-{
-    FileInfo f;
-
-    f.fileNum = array[startIndex];
-    f.chunkCount = parseIntFromCharArray(array, startIndex + 1);
-
-    std::string fileName (array + 2, MAX_FILE_NAME_LENGTH);
-    f.fileName = fileName;
-
-    return f;
-}
 
 char
 Frame::getFrameType()
@@ -71,7 +25,7 @@ Frame::getFrameType()
 PeerInfoFrame::PeerInfoFrame(std::string ip, std::string port)
 {
     strcpy(serializedData + sizeof(char), ip.c_str());
-    copyShortToCharArray(serializedData + 16, (short)atoi(port.c_str()));
+    serialization_helpers::copyShortToCharArray(serializedData + 16, (short)atoi(port.c_str()));
 }
 
 std::string
@@ -85,7 +39,7 @@ std::string
 PeerInfoFrame::getPort()
 {
     char portStr[10];
-    sprintf(portStr, "%d", parseShortFromCharArray(serializedData + 16));
+    sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(serializedData + 16));
 
     return std::string(portStr, 5);
 }
@@ -115,13 +69,13 @@ HandshakeResponseFrame::HandshakeResponseFrame(std::string ip, std::string port)
 
 ChunkFrame::ChunkFrame(char fileNum, int chunkNum): FileNumFrame(fileNum)
 {
-    copyIntToCharArray(serializedData + 2, chunkNum);
+    serialization_helpers::copyIntToCharArray(serializedData + 2, chunkNum);
 }
 
 int
 ChunkFrame::getChunkNum()
 {
-    return parseIntFromCharArray(serializedData, 2);
+    return serialization_helpers::parseIntFromCharArray(serializedData, 2);
 }
 
 ChunkDataFrame::ChunkDataFrame(char fileNum, int chunkNum, char * chunk): ChunkFrame(fileNum, chunkNum)
@@ -160,13 +114,7 @@ FileListFrame::getFileCount()
 void
 FileListFrame::parseFileInfos()
 {
-    std::vector<FileInfo> * fileInfos = new std::vector<FileInfo>();
-    for (int i = 2; i < FRAME_LENGTH - (int)(3*sizeof(char)); i += FILE_INFO_DATA_WIDTH)
-    {
-        FileInfo f = parseFileInfo(serializedData, i);
-        fileInfos->push_back(f);
-    }
-    this->fileInfos_ = fileInfos;
+
 }
 
 std::vector<FileInfo>
@@ -187,7 +135,7 @@ FileListFrame::FileListFrame(char fileCount, std::vector<FileInfo> files)
         int serialDataIdx = 2 * sizeof(char) + (i * FILE_INFO_DATA_WIDTH);
         FileInfo file = files[i];
         serializedData[serialDataIdx] = file.fileNum;
-        copyIntToCharArray(serializedData + serialDataIdx + sizeof(char), file.chunkCount);
+        serialization_helpers::copyIntToCharArray(serializedData + serialDataIdx + sizeof(char), file.chunkCount);
     }
 }
 
@@ -205,7 +153,7 @@ FileListDeclineFrame::FileListDeclineFrame()
 FileInfo
 NewFileAvailableFrame::getFileInfo()
 {
-    return parseFileInfo(serializedData, 1);
+    return serialization_helpers::parseFileInfo(serializedData, 1);
 }
 
 
@@ -279,7 +227,7 @@ ChunkInfoFrame::getChunkMap()
 
 ChunkInfoRequestFrame::ChunkInfoRequestFrame()
 {
-    serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
+
 }
 
 namespace frame_function{
@@ -295,7 +243,105 @@ namespace frame_function{
     std::string getPort(char *serializedData)
     {
         char portStr[10];
-        sprintf(portStr, "%d", parseShortFromCharArray(serializedData + 16));
+        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(serializedData + 16));
         return std::string(portStr, 5);
+    }
+
+}
+
+namespace serialization_helpers{
+    FileInfo
+    parseFileInfo(char * array, int startIndex)
+    {
+        FileInfo f;
+
+        f.fileNum = array[startIndex];
+        f.chunkCount = serialization_helpers::parseIntFromCharArray(array, startIndex + 1);
+
+        std::string fileName (array + 2, MAX_FILE_NAME_LENGTH);
+        f.fileName = fileName;
+
+        return f;
+    }
+
+    int
+    parseIntFromCharArray(const char * array, int startIndex)
+    {
+        int toReturn = 0;
+        for (int i = startIndex; i < 4; i++)
+        {
+            toReturn = (toReturn << 8) + array[i];
+        }
+        return toReturn;
+    }
+
+    short
+    parseShortFromCharArray(const char * array)
+    {
+        short toReturn = 0;
+        for (int i = 0; i < 2; i++)
+        {
+            toReturn = (toReturn << 8) + array[i];
+        }
+        return toReturn;
+    }
+
+    void
+    copyIntToCharArray(char * array, int toCopy)
+    {
+        array[0] = toCopy & 0xff;
+        array[1] = (toCopy>>8)  & 0xff;
+        array[2] = (toCopy>>16) & 0xff;
+        array[3] = (toCopy>>24) & 0xff;
+    }
+
+    void
+    copyShortToCharArray(char * array, short toCopy)
+    {
+        array[0] = toCopy & 0xff;
+        array[1] = (toCopy>>8)  & 0xff;
+    }
+}
+
+namespace fileListFrame_serialization{
+
+    Frame *
+    createFileListFrame(char fileCount, std::vector<FileInfo *> files)
+    {
+        Frame * frame = new Frame();
+
+        frame->serializedData[0] = (char)FrameType::FILE_LIST;
+        frame->serializedData[1] = (char)files.size();
+        for (int i; i < (int)files.size(); i++)
+        {
+            int serialDataIdx = 2 * sizeof(char) + (i * FILE_INFO_DATA_WIDTH);
+            FileInfo * file = files[i];
+            frame->serializedData[serialDataIdx] = file->fileNum;
+            serialization_helpers::copyIntToCharArray(frame->serializedData + serialDataIdx + sizeof(char), file->chunkCount);
+        }
+    }
+
+    std::vector<FileInfo>
+    getFileInfos(Frame * frame)
+    {
+        std::vector<FileInfo> fileInfos;
+        for (int i = 2; i < FRAME_LENGTH - (int)(3*sizeof(char)); i += FILE_INFO_DATA_WIDTH)
+        {
+            FileInfo f = serialization_helpers::parseFileInfo(frame->serializedData, i);
+            fileInfos.push_back(f);
+        }
+        return fileInfos;
+    }
+}
+
+
+namespace chunkInfoRequest_serialization
+{
+    Frame *
+    createChunkInfoRequest()
+    {
+        Frame * newFrame = new Frame();
+        newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
+        return newFrame;
     }
 }
