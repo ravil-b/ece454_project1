@@ -135,6 +135,8 @@ Peer::Peer(int peerNumber, string ip, string port, Peers *peers)
       port_(port),
       state_(UNKNOWN), 
       peers_(peers),
+      sendq_(NULL),
+      receiveq_(NULL),
       incomingConnectionsThread_(NULL){
 
     if (peerNumber == 0){
@@ -173,7 +175,17 @@ Peer::initRemotePeer(){
     TRACE("peer.cpp", "Initializing remote peer.");
     // connect to the peer to see if it is online
     state_ = INITIALIZING;
-    
+    sendq_ = new ThreadSafeQueue<Frame *>();
+    unsigned int sessionId;
+    int connCode = peers_->connection_->connect(ipAddress_, port_, &sessionId, sendq_);
+    if (connCode != CONNECTION_OK){
+	TRACE("peer.cpp", "Cannot connect to remote peer. DISCONNECTED");
+	state_ = DISCONNECTED;
+	delete sendq_;
+	sendq_ = NULL;
+	return errCannotConnectToPeer;
+    }
+    TRACE("peer.cpp", "Connected to remote peer. Requested handshake.");
     return errOK;
 }
 
@@ -187,7 +199,7 @@ Peer::acceptConnections(){
     Request request;
     while(receiveq_->pop(&request)){
         Peer::handleRequest(request);
-
+	
     }
 
     delete request.frame;
