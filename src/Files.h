@@ -16,7 +16,6 @@ struct RemoteFileInfo: FileInfo
     int totalChunksDownloaded;
 };
 
-
 struct LocalFileInfo : FileInfo
 {
     std::map<int, bool> chunksDownloaded;

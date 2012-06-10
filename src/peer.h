@@ -22,6 +22,8 @@
 #include "Cli.h"
 #include "Frames.h"
 #include "Globals.h"
+#include "ThreadSafeQueue.h"
+#include "Connection.h"
 
 using namespace std;
 
@@ -56,7 +58,7 @@ public:
     string getPort();
 
     int broadcastFrame(Frame * message);
-    int sendFrame(Frame * message, Peer* toPeer);
+    int sendFrame(Frame * frame);
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -69,12 +71,14 @@ private:
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN } state_;
     Peers *peers_;
 
-    static ThreadSafeQueue<Frame *> * sq = new ThreadSafeQueue<Frame *>();
+    ThreadSafeQueue<Frame *> * sendq_;
+    ThreadSafeQueue<Request> * receiveq_;
 
 
     boost::thread *incomingConnectionsThread_;
 
     void acceptConnections();
+    void handleRequest(Request request);
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,
@@ -95,7 +99,7 @@ class Peers : public CliCmdHandler {
                                       // This file should be available on every machine on which a peer is started,
                                       // though you should exit gracefully if it is absent or incorrectly formatted.
                                       // After execution of this method, the _peers should be present.
-    Peer operator()(int i);
+    Peer * operator[](int i);
     
     // You will likely want to add methods such as visit()
     void handleCmd(vector<string> *cmd);

@@ -1,4 +1,6 @@
- #include <cstdlib>
+#define BOOST_THREAD_USE_LIB
+
+#include <cstdlib>
 
 #include <boost/bind.hpp>
 

@@ -8,6 +8,7 @@ Robin Vierich
 A simple thread safe queue for this application.
 */
 
+#define BOOST_THREAD_USE_LIB
 
 #ifndef THREADSAFEQUEUE_H
 #define THREADSAFEQUEUE_H

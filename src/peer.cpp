@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "peer.h"
 #include "Frames.h"
+#include "Connection.h"
+#include "ThreadSafeQueue.h"
 
 #include <vector>
 #include <boost/algorithm/string.hpp>
@@ -117,6 +119,12 @@ Peers::getPeerCount()
     return peerCount_;
 }
 
+Peer *
+Peers::operator[] (int i)
+{
+    return peers_[i];
+}
+
 /*
  * Peer
  */
@@ -134,6 +142,10 @@ Peer::Peer(int peerNumber, string ip, string port)
     else{
 	initRemotePeer();	
     }
+
+    receiveq_ = new ThreadSafeQueue<Request>();
+
+    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 } 
 
 Peer::~Peer(){
@@ -147,7 +159,12 @@ Peer::initLocalPeer(){
     state_ = INITIALIZING;
     //    server_ = new Server();
     
-    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+//    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+    sendq_ = new ThreadSafeQueue<Frame *>();
+
+    Connection * c = new Connection();
+    c->startServer(port_, receiveq_);
+
     return errOK;
 }
 
@@ -164,11 +181,63 @@ Peer::acceptConnections(){
     if (port == 0){
 	// TODO Crash and burn
     }
-    while(true){
-        Frame request;
-	//server_->waitForRequest(&request, port);
-	TRACE("peer.cpp", "Request Data:");
-	TRACE("peer.cpp", request.serializedData);
+    Request * request;
+    while(receiveq_->pop(request)){
+        Peer::handleRequest(request);
+
+    }
+
+    delete request;
+    delete receiveq_;
+}
+
+
+void
+Peer::handleRequest(Request request)
+{
+    switch (request.frame->getFrameType())
+    {
+        case FrameType::CHUNK:
+
+            break;
+
+        case FrameType::CHUNK_COUNT:
+
+            break;
+
+        case FrameType::CHUNK_COUNT_REQUEST:
+
+            break;
+
+
+        case FrameType::CHUNK_REQUEST:
+
+            break;
+
+        case FrameType::CHUNK_REQUEST_DECLINE:
+
+            break;
+
+        case FrameType::FILE_LIST:
+
+            break;
+
+        case FrameType::FILE_LIST_DECLINE:
+
+            break;
+
+        case FrameType::FILE_LIST_REQUEST:
+
+            break;
+
+        case FrameType::NEW_CHUNK_AVAILABLE:
+
+                break;
+        case FrameType::NEW_FILE_AVAILABLE:
+
+                break;
+
+
     }
 }
 
@@ -267,7 +336,7 @@ int Peer::join()
 {
     // request a file list from a peer
     FileListRequestFrame * frame = new FileListRequestFrame();
-
+    peers_[0]->sendFrame(frame);
 
 
     // if peer doesn't return a FILE_LIST_DECLINE,
@@ -280,31 +349,15 @@ int Peer::join()
 }
 
 int
-Peer::broadcastFrame(Frame frame)
-{
-    for (int i = 0; i < maxPeers; i++)
-    {
-        Peer * peer = peers_->getPeers()[i];
-        if (peer == NULL) continue;
-        if (peer == this) continue;
-
-        int retVal = sendFrame(frame, peer);
-
-        if (retVal == errCannotSendMessage)
-            return errCannotSendMessage;
-    }
-    return errOK;
-}
-
-int
-Peer::sendFrame(Frame * frame, Peer * toPeer)
+Peer::sendFrame(Frame * frame)
 {
     try{
         // this.client.sendMessage(peer.getIpAddress(), frame.data)
         Connection *c = new Connection();
-        sq->push(frame);
+        sendq_->push(frame);
 
-
+        unsigned int sessionId;
+        c->connect(getIpAddress(), getPort(), &sessionId, sendq_);
     }
     catch (std::exception& e)
     {
