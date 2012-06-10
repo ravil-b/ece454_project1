@@ -70,7 +70,7 @@ public:
     void disconnect();
 
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
-		 ERROR_STATE, WAITING_FOR_HANDSHAKE } state_;
+		 ERROR_STATE, WAITING_FOR_HANDSHAKE, ONLINE, OFFLNE } state_;
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -99,6 +99,9 @@ private:
 
     void acceptConnections();
     void handleRequest(Request request);
+
+    // Mutex to protect connect/disconnect
+    boost::mutex connectionMutex_;
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,
@@ -201,7 +204,7 @@ const int errPeersFileFmtFail  = -7; // The peers file has wrong format.
 const int errInsertFileNotFound    = -8; // can't find the file to insert.
 const int errCannotCopyInsertFile  = -9; // something went wrong copying the file to be inserted
 
-const int errCannotSendMessage  = -10;
+const int errCannotSendFrame  = -10;
 const int errCannotConnectToPeer  = -11;
 
 // please add as necessary
