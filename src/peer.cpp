@@ -164,6 +164,7 @@ Peer::initLocalPeer(){
     					 peers_->connection_, port_, receiveq_));
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
+
     return errOK;
 }
 
@@ -200,6 +201,18 @@ Peer::handleRequest(Request request)
 {
     switch (request.frame->getFrameType())
     {
+
+        case FrameType::HANDSHAKE_REQUEST:
+            HandshakeResponseFrame * response = new HandshakeResponseFrame();
+            ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
+            q->push(response);
+            break;
+
+        case FrameType::HANDSHAKE_RESPONSE:
+            // add peer to a list of connected peers.
+
+            break;
+
         case FrameType::CHUNK:
             // write the chunk to file
             break;
