@@ -25,6 +25,7 @@
 #include "ThreadSafeQueue.h"
 #include "Connection.h"
 #include "FileChunkIO.h"
+#include "Files.h"
 
 using namespace std;
 
@@ -53,6 +54,7 @@ public:
 
     int initLocalPeer();
     int initRemotePeer();
+    int initLocalFileStore();
 
     int getPeerNumber();
     string getIpAddress();
@@ -63,6 +65,9 @@ public:
     int broadcastFrame(Frame * message);
     int sendFrame(Frame * frame);
     int getChunkCount(char fileNum);
+
+    int connect();
+    void disconnect();
 
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
 		 ERROR_STATE, WAITING_FOR_HANDSHAKE } state_;
@@ -76,7 +81,6 @@ private:
     FileInfoList fileList_;
 
     map<char, map<int, int> > chunkMap_;
-    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
     Peers *peers_;
     FileChunkIO * chunkIO_;
 
@@ -84,7 +88,8 @@ private:
     // When not null, this queue indicates that a connection with a peer
     // is established and it can be used to send the information to it.
     ThreadSafeQueue<Frame *> * sendq_;
-
+    // The session id can be used to close the connection with the peer
+    unsigned int sessionId_;
     // This queue is used only if the peer is local 
     // (peer 0 in peers[]) to accept incomming requests.
     ThreadSafeQueue<Request> * receiveq_;

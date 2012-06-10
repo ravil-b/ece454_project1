@@ -161,6 +161,7 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 	if (sendQ_ != NULL){
 	    sendQ_->stopReading();
 	}
+	// reset ref count to this shared ptr.
     }
 }
 
@@ -240,7 +241,7 @@ Server::handleAccept(boost::shared_ptr<Session> newSession, const boost::system:
     TRACE("Connection.cpp", "Accepting a connection");
     if (!error){
 	newSession->setSendQ(connection_->addSession(newSession->sessionId(),
-						     newSession));
+						     newSession.get()));
 	newSession->start();
 	unsigned int sessionId = connection_->generateSessionId();
 	newSession = Session::create(sessionId, connection_, ioService_, receiveQ_);
@@ -316,7 +317,7 @@ Connection::connect(const std::string &ip, const std::string &port,
     *sessionId = generateSessionId();
     boost::shared_ptr<Session> newSession = Session::create(*sessionId, this, 
 							    newSocket, receiveQ_, sendQ);
-    sessionIdAndSessionMap_.insert(std::make_pair(*sessionId, newSession));
+    sessionIdAndSessionMap_.insert(std::make_pair(*sessionId, newSession.get()));
     newSession->start();
     return retVal;
 }
@@ -328,7 +329,7 @@ Connection::generateSessionId(){
 }
 
 ThreadSafeQueue<Frame *> *
-Connection::addSession(unsigned int sessionId, boost::shared_ptr<Session> session){
+Connection::addSession(unsigned int sessionId, Session *session){
     // create a new send queue 
     boost::mutex::scoped_lock lock(sessionMapMutex_);
     TRACE("Connection.cpp", "Adding a new session into the map.");
@@ -353,6 +354,19 @@ Connection::getReplyQueue(unsigned int requestId){
     return iter->second;
 }
 
+bool 
+Connection::isConnected(unsigned int sessionId){
+    boost::mutex::scoped_lock lock(sessionMapMutex_);
+    TRACE("Connection.cpp", "Looking up if connection is still good");
+    std::map<unsigned int, Session *>::iterator iter;
+    iter = sessionIdAndSessionMap_.find(sessionId);
+    if (iter == sessionIdAndSessionMap_.end()){
+	return false;
+    }
+    return true;
+}
+
+
 void
 Connection::removeSession(unsigned int sessionId){
     boost::mutex::scoped_lock lock(sessionMapMutex_);
@@ -371,7 +385,7 @@ Connection::removeSession(unsigned int sessionId){
 	sessionIdAndSendQueueMap_.erase(iter);
     }
     // and remove it from the other map
-    std::map<unsigned int, boost::shared_ptr<Session> >::iterator iter2;
+    std::map<unsigned int, Session * >::iterator iter2;
     iter2 = sessionIdAndSessionMap_.find(sessionId);
     if (iter2 != sessionIdAndSessionMap_.end()){
 	sessionIdAndSessionMap_.erase(iter2);
@@ -382,12 +396,11 @@ void
 Connection::endSession(unsigned int sessionId){
     TRACE("Connection.cpp", "Closing Session");
     boost::mutex::scoped_lock lock(sessionMapMutex_);
-    std::map<unsigned int, boost::shared_ptr<Session> >::iterator iter;
+    std::map<unsigned int, Session *>::iterator iter;
     iter = sessionIdAndSessionMap_.find(sessionId);
     if (iter != sessionIdAndSessionMap_.end()){
 	iter->second->socket()->shutdown(tcp::socket::shutdown_both);
 	iter->second->socket()->close();
-	iter->second.reset();
     }
 }
 

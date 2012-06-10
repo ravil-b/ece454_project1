@@ -3,7 +3,7 @@
 #include <string.h>
 
 FileInfo *
-LocalFileInfoList::getFileFromFileNumber(char fileNum)
+FileInfoList::getFileFromFileNumber(char fileNum)
 {
     for (int fileIdx; fileIdx < files.size(); fileIdx++)
     {
@@ -16,7 +16,7 @@ LocalFileInfoList::getFileFromFileNumber(char fileNum)
 }
 
 FileInfo *
-LocalFileInfoList::getFileFromFileName(std::string fileName)
+FileInfoList::getFileFromFileName(std::string fileName)
 {
     for (int fileIdx; fileIdx < files.size(); fileIdx++)
     {

@@ -14,7 +14,7 @@ struct FileInfo // stores info about a file
 };
 
 
-struct LocalFileInfoList
+struct FileInfoList
 {
     std::vector<FileInfo *> files;
     FileInfo * getFileFromFileNumber(char fileNumber);

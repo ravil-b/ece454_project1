@@ -68,6 +68,12 @@ Peers::initialize(){
 	    TRACE("peer.cpp", "Wrong number of peers in peers file");
 	    return errPeersFileFmtFail;
 	}
+	// Once all peers are initialized, finish initializing the local
+	// storage of file.
+	if (peers_[0]->initLocalFileStore() != 0){
+	    cerr << "CANNOT INITIALIZE LOCAL FILE STORAFE. Quitting." << endl;
+	    // TODO exit the program
+	}
 	return errOK;
     }
     TRACE("peer.cpp", "Failed to open peers file for reading");
@@ -103,6 +109,10 @@ Peers::removePeer(Peer * peer)
 
 void 
 Peers::handleCmd(vector<string> *cmd){
+    // receives commands from the cli command handler.
+    // the first element in cmd is the actual command
+    // followed by any parameters.
+    
     return;
 }
 
@@ -162,10 +172,9 @@ Peer::initLocalPeer(){
 
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
-    boost::thread connThread(boost::bind(&Connection::startServer, 
-    					 peers_->connection_, port_, receiveq_));
+    boost::thread serverThread(boost::bind(&Connection::startServer, 
+					   peers_->connection_, port_, receiveq_));
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
-
 
     return errOK;
 }
@@ -176,15 +185,9 @@ Peer::initRemotePeer(){
     TRACE("peer.cpp", "Initializing remote peer.");
     // connect to the peer to see if it is online
     state_ = INITIALIZING;
-    sendq_ = new ThreadSafeQueue<Frame *>();
-    unsigned int sessionId;
-    int connCode = peers_->connection_->connect(ipAddress_, port_, &sessionId, sendq_);
-    if (connCode != CONNECTION_OK){
-	TRACE("peer.cpp", "Cannot connect to remote peer. DISCONNECTED");
-	state_ = DISCONNECTED;
-	delete sendq_;
-	sendq_ = NULL;
-	return errCannotConnectToPeer;
+    int connCode = connect();
+    if (connCode != errOK){
+	return connCode;
     }
     state_ = WAITING_FOR_HANDSHAKE;
     TRACE("peer.cpp", "Connected to remote peer. Requesting handshake.");
@@ -194,6 +197,12 @@ Peer::initRemotePeer(){
 
     return errOK;
 }
+
+int 
+Peer::initLocalFileStore(){
+    return errOK;
+}
+
 
 void 
 Peer::acceptConnections(){
@@ -249,6 +258,8 @@ Peer::handleRequest(Request request)
 			    framePort.c_str()))){
 		    TRACE("peer.cpp", "Received handshake. CONNECTED");
 		    (*peers_)[i]->state_ = CONNECTED;
+		    // Close the connection with that remote peer.
+		    disconnect();
 		    break;
 		}
 	    }
@@ -289,9 +300,6 @@ Peer::handleRequest(Request request)
 
         case FrameType::FILE_LIST:
             // update local file list
-
-
-
 
             break;
 
@@ -461,4 +469,33 @@ string Peer::getIpAddress()
 string Peer::getPort()
 {
     return port_;
+}
+
+int 
+Peer::connect(){
+    // check if connection is still alive
+    if (peers_->connection_->isConnected(sessionId_)){
+	return errOK;
+    }
+    // if not, start one
+    sendq_ = new ThreadSafeQueue<Frame *>();
+    int connCode = peers_->connection_->connect(ipAddress_, port_, 
+						&sessionId_, sendq_);
+    if (connCode != CONNECTION_OK){
+	TRACE("peer.cpp", "Cannot connect to remote peer. DISCONNECTED");
+	state_ = DISCONNECTED;
+	delete sendq_;
+	sendq_ = NULL;
+	return errCannotConnectToPeer;
+    }
+    
+    return errOK;
+}
+
+void
+Peer::disconnect(){
+    if (sendq_ != NULL){
+	peers_->connection_->endSession(sessionId_);
+    }
+    sendq_ = NULL;
 }
