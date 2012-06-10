@@ -44,6 +44,8 @@ class Connection;
 
 struct Request{
     unsigned int requestId;
+    std::string ip;
+    unsigned short port;
     Frame *frame;
 };
 
@@ -77,6 +79,7 @@ class Session : public boost::enable_shared_from_this<Session> {
     ThreadSafeQueue<Request> *receiveQ_;
     ThreadSafeQueue<Frame *> *sendQ_;
     Frame *incomingFrame_;
+    size_t incomingFrameIndex_;
     Frame *outgoingFrame_;
     bool writeStarted_;
     boost::thread *startWriteThread_;
