@@ -8,14 +8,28 @@
 #include "Frames.h"
 #include <vector>
 #include <map>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 int
 parseIntFromCharArray(const char * array, int startIndex)
 {
     int toReturn = 0;
-    for (int i = startIndex; i < startIndex + (int)sizeof(int); i++)
+    for (int i = startIndex; i < 4; i++)
     {
-        toReturn = (toReturn << sizeof(char)) + array[i];
+        toReturn = (toReturn << 8) + array[i];
+    }
+    return toReturn;
+}
+
+short
+parseShortFromCharArray(const char * array)
+{
+    short toReturn = 0;
+    for (int i = 0; i < 2; i++)
+    {
+        toReturn = (toReturn << 8) + array[i];
     }
     return toReturn;
 }
@@ -26,6 +40,12 @@ void copyIntToCharArray(char * array, int toCopy)
     array[1] = (toCopy>>8)  & 0xff;
     array[2] = (toCopy>>16) & 0xff;
     array[3] = (toCopy>>24) & 0xff;
+}
+
+void copyShortToCharArray(char * array, short toCopy)
+{
+    array[0] = toCopy & 0xff;
+    array[1] = (toCopy>>8)  & 0xff;
 }
 
 RemoteFileInfo
@@ -49,6 +69,29 @@ Frame::getFrameType()
     return serializedData[0];
 }
 
+PeerInfoFrame::PeerInfoFrame(std::string ip, std::string port)
+{
+    strcpy(serializedData + sizeof(char), ip.c_str());
+    copyShortToCharArray(serializedData + 16, (short)atoi(port.c_str()));
+}
+
+std::string
+PeerInfoFrame::getIp()
+{
+    return std::string(serializedData + 1, 15);
+
+}
+
+std::string
+PeerInfoFrame::getPort()
+{
+    char portStr[10];
+    sprintf(portStr, "%d", parseShortFromCharArray(serializedData + 16));
+
+    return std::string(portStr, 5);
+}
+
+
 FileNumFrame::FileNumFrame(char fileNum)
 {
     serializedData[1] = fileNum;
@@ -60,12 +103,12 @@ FileNumFrame::getFileNum()
     return serializedData[1];
 }
 
-HandshakeRequest::HandshakeRequest()
+HandshakeRequestFrame::HandshakeRequestFrame()
 {
     serializedData[0] = (char)FrameType::HANDSHAKE_REQUEST;
 }
 
-HandshakeResponse::HandshakeResponse()
+HandshakeResponseFrame::HandshakeResponseFrame()
 {
     serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
 }

@@ -186,7 +186,13 @@ Peer::initRemotePeer(){
 	sendq_ = NULL;
 	return errCannotConnectToPeer;
     }
-    TRACE("peer.cpp", "Connected to remote peer. Requested handshake.");
+
+    state_ = CONNECTED;
+    TRACE("peer.cpp", "Connected to remote peer. Requesting handshake.");
+
+    HandshakeRequestFrame * handshakeRequest = new HandshakeRequestFrame();
+    sendq_->push(handshakeRequest);
+
     return errOK;
 }
 
@@ -215,14 +221,19 @@ Peer::handleRequest(Request request)
     {
 
         case FrameType::HANDSHAKE_REQUEST:
+        {
+            cout << "Handshake Request Received" << endl;
             HandshakeResponseFrame * response = new HandshakeResponseFrame();
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
             q->push(response);
-            break;
+        }
+        break;
 
         case FrameType::HANDSHAKE_RESPONSE:
+        {
+            cout << "Handshake Response Received" << endl;
             // add peer to a list of connected peers.
-
+        }
             break;
 
         case FrameType::CHUNK:
@@ -266,6 +277,8 @@ Peer::handleRequest(Request request)
         case FrameType::NEW_FILE_AVAILABLE:
 
                 break;
+        default:
+            break;
 
 
     }

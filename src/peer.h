@@ -69,10 +69,9 @@ private:
     string port_;
     vector<LocalFileInfo> fileList_;
     map<int, int> peerChunkCount_;
-    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR } state_;
+    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, ERROR_STATE } state_;
     Peers *peers_;
     FileChunkIO * chunkIO;
-
     // When not null, this queue indicates that a connection with a peer
     // is established and it can be used to send the information to it.
     ThreadSafeQueue<Frame *> * sendq_;

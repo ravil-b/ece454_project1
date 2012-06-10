@@ -62,18 +62,26 @@ struct Frame
     char getFrameType();
     void setFrameType(FrameType frameType);
 
-
-
 };
 
-struct HandshakeRequest : Frame
+
+
+struct PeerInfoFrame: Frame
 {
-    HandshakeRequest();
+    PeerInfoFrame(std::string ip, std::string port);
+    std::string getIp();
+    std::string getPort();
 };
 
-struct HandshakeResponse : Frame
+
+struct HandshakeRequestFrame : Frame
 {
-    HandshakeResponse();
+    HandshakeRequestFrame();
+};
+
+struct HandshakeResponseFrame : Frame
+{
+    HandshakeResponseFrame();
 };
 
 struct FileNumFrame: Frame
