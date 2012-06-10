@@ -333,7 +333,7 @@ Peer::handleRequest(Request request)
 	    cout << "File list response received" << endl;
             std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(frame);
 
-            for (int i; i < fileInfos.size(); i++)
+            for (int i = 0; i < fileInfos.size(); i++)
             {
                 FileInfo f = fileInfos[i];
 		cout << "Got file name" << f.fileName << endl;
@@ -361,22 +361,8 @@ Peer::handleRequest(Request request)
             // if so, respond with file list
                 //else : send file_list_decline
 	    cout << "File list request received" << endl;
-	    // testing
-	    std::vector<FileInfo *> fileInfos;
-	    FileInfo *f1 = new FileInfo();
-	    f1->fileName = "TestFile1";
-	    f1->fileNum = 1;
-	    f1->chunkCount = 100;
-	    fileInfos.push_back(f1);
-	    FileInfo *f2 = new FileInfo();
-	    f2->fileName = "TestFile2";
-	    f2->fileNum = 2;
-	    f2->chunkCount = 100;
-	    fileInfos.push_back(f2);
-
-            Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(
-                    fileList_.files.size(),
-                    fileList_.files);
+            Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(	     
+                fileList_.files.size(), fileList_.files);
 
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
 	    std::cout << fileListFrame->serializedData[0] << std::endl;
