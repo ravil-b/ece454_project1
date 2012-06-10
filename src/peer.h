@@ -52,6 +52,7 @@ public:
     int join();     // Note that we should have the peer list, so it is not needed as a parameter
     int leave();
 
+    int initPeer();
     int initLocalPeer();
     int initRemotePeer();
     int initLocalFileStore();
@@ -59,12 +60,16 @@ public:
     int getPeerNumber();
     string getIpAddress();
     string getPort();
+    FileInfoList getFileInfoList();
 
-    map<char, map<int, int> > getChunkMap();
+    //map<char, map<int, bool> >  getFileChunkMap();
 
     int broadcastFrame(Frame * message);
     int sendFrame(Frame * frame);
     int getChunkCount(char fileNum);
+
+    bool haveChunkInfo(char fileNum);
+    void setHaveChunkInfo(char fileNum, bool value);
 
     int connect();
     void disconnect();
@@ -81,10 +86,12 @@ private:
     string port_;
 
     FileInfoList fileList_;
+    map<char, bool> haveChunkInfo_;
+    //map<char, map<int, bool> > fileChunkMap_; // {fileNum: {chunkNum: hasChunk}}
 
-    map<char, map<int, int> > chunkMap_;
     Peers *peers_;
     FileChunkIO * chunkIO_;
+
 
 
     // When not null, this queue indicates that a connection with a peer
@@ -93,16 +100,18 @@ private:
     // The session id can be used to close the connection with the peer
     unsigned int sessionId_;
     // This queue is used only if the peer is local 
-    // (peer 0 in peers[]) to accept incomming requests.
+    // (peer 0 in peers[]) to accept incoming requests.
     ThreadSafeQueue<Request> * receiveq_;
 
     boost::thread *incomingConnectionsThread_;
 
     void acceptConnections();
     void handleRequest(Request request);
+    void handleFileListFrame(Frame * fileListFrame);
 
     // Mutex to protect connect/disconnect
     boost::mutex connectionMutex_;
+
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,

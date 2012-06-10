@@ -87,6 +87,8 @@ namespace serialization_helpers{
 }
 
 
+
+
 namespace frame_function{
     // IP and Port
     std::string getIp(char *serializedData);
@@ -122,11 +124,15 @@ namespace fileListRequestFrame_serialization
 };
 
 
-struct PeerInfoFrame: Frame
+
+namespace handshakeRequestFrame_serialization
 {
-    PeerInfoFrame(std::string ip, std::string port);
-    std::string getIp();
-    std::string getPort();
+
+};
+
+namespace handshakeResponseFrame_serialization
+{
+
 };
 
 

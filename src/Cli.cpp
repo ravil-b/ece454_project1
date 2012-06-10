@@ -73,8 +73,8 @@ Cli::registerCommand(Command &cmd){
     TRACE("Cli.cpp", "registerCommand()");
     
     if (findMatchingCommand(cmd.cmdStr) == NULL){
-	commands_.push_back(cmd);
-	return true;
+        commands_.push_back(cmd);
+        return true;
     }
     return false;
 }

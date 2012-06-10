@@ -106,14 +106,39 @@ main(int argc, char* argv[]){
     // Initialize Cli and run it in a separate thread.
     TRACE("main.cpp", "Initializing CLI");
     Cli *cli = new Cli();
-    boost::thread cliThread(boost::bind(&Cli::run, cli));    
 
     // Create the peers container and make it initialize all peers
     TRACE("main.cpp", "Initializing Peers");
     Peers *peers = new Peers(cli, "peers.txt");
     boost::thread peersThread(boost::bind(&Peers::initialize, peers));
 
-    
+
+    TRACE("main.cpp", "Adding CLI Commands");
+    Command insertCommand;
+    insertCommand.cmdStr = "insert";
+    insertCommand.numArgs = 1;
+    insertCommand.handler = peers;
+    cli->registerCommand(insertCommand);
+
+    Command queryCommand;
+    queryCommand.cmdStr = "query";
+    queryCommand.numArgs = 0;
+    queryCommand.handler = peers;
+    cli->registerCommand(queryCommand);
+
+    Command joinCommand;
+    joinCommand.cmdStr = "join";
+    joinCommand.numArgs = 0;
+    joinCommand.handler = peers;
+    cli->registerCommand(joinCommand);
+
+    Command leaveCommand;
+    leaveCommand.cmdStr = "leave";
+    leaveCommand.numArgs = 0;
+    leaveCommand.handler = peers;
+    cli->registerCommand(leaveCommand);
+
+    boost::thread cliThread(boost::bind(&Cli::run, cli));    
 
     // Cli::run() returns when the user types "quit" in terminal
     // TODO make sure the client gracefully shutsdown...

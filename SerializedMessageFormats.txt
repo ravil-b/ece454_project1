@@ -6,6 +6,7 @@ Serialized Message Formats
 ---------------
 |     char    |
 
+
 // HANDSHAKE_RESPONSE
 
 | messageType |     ip      |    port    |
@@ -20,12 +21,12 @@ Serialized Message Formats
 |     char    |  char   |   int    |    char[65536]       |
 
 
-
 // CHUNK_REQUEST
 
 | messageType | fileNum | chunkNum |
 ------------------------------------
 |     char    |  char   |   int    |
+
 
 // CHUNK_REQUEST_DECLINE
 

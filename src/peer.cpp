@@ -133,7 +133,7 @@ Peers::handleCmd(vector<string> *cmd){
         Status s;
         localPeer->query(s);
         TRACE("peer.cpp", "Status of local peer")
-        TRACE("peer.cpp", s.toString(localPeer->getChunkMap().size()))
+        TRACE("peer.cpp", s.toString(localPeer->getFileInfoList().files.size()))
 
     }
     else if (strcmp(commandStr.c_str(), joinCommandStr.c_str()) == 0)
@@ -150,7 +150,7 @@ Peers::handleCmd(vector<string> *cmd){
 
 void
 Peers::broadcastFrame(Frame * frame, Peer * fromPeer){
-    for (int i; i < peerCount_; i++)
+    for (int i = 0; i < peerCount_; i++)
     {
         if (i == fromPeer->getPeerNumber()) continue;
 
@@ -193,17 +193,20 @@ Peer::Peer(int peerNumber, string ip, string port, Peers *peers)
       receiveq_(NULL),
       incomingConnectionsThread_(NULL){
 
-    if (peerNumber == 0){
-	initLocalPeer();
-    }
-    else{
-	initRemotePeer();	
-    }
-
-
 } 
 
 Peer::~Peer(){
+}
+
+int
+Peer::initPeer()
+{
+    if (peerNumber_ == 0){
+       initLocalPeer();
+   }else{
+       initRemotePeer();
+   }
+    return errOK;
 }
 
 int 
@@ -216,12 +219,6 @@ Peer::initLocalPeer(){
     sendq_ = NULL;
     chunkIO_ = new FileChunkIO();
 
-    peers_->connection_ = new Connection();
-    receiveq_ = new ThreadSafeQueue<Request>();
-    if (peers_->connection_->startServer(port_, receiveq_)){
-	cerr << "FAILED TO START THE SERVER." << endl;
-    }
-    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
     return errOK;
 }
@@ -234,7 +231,7 @@ Peer::initRemotePeer(){
     state_ = INITIALIZING;
     int connCode = connect();
     if (connCode != errOK){
-	return connCode;
+        return connCode;
     }
     state_ = WAITING_FOR_HANDSHAKE;
     TRACE("peer.cpp", "Connected to remote peer. WAITING_FOR_HANDSHAKE");
@@ -363,22 +360,7 @@ Peer::handleRequest(Request request)
             // update local file list
         {
 	    cout << "File list response received" << endl;
-            std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(frame);
-
-            for (int i; i < fileInfos.size(); i++)
-            {
-                FileInfo f = fileInfos[i];
-		cout << "Got file name" << f.fileName << endl;
-		cout << "Got file num" << f.fileNum << endl;
-		cout << "Got chunk count" << f.chunkCount << endl;
-                if (!fileList_.contains(&f))
-                {
-                    FileInfo * newFile = new FileInfo(f);
-                    fileList_.files.push_back(newFile);
-                    Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
-                    peers_->broadcastFrame(chunkInfoRequest, this);
-                }
-            }
+            handleFileListFrame(frame);
 
         }
             break;
@@ -430,9 +412,47 @@ Peer::handleRequest(Request request)
         case FrameType::NEW_FILE_AVAILABLE:
             // update local file list
             break;
+
+        case FrameType::CHUNK_INFO:
+    //    {
+
+    //    }
+            break;
+
         default:
             break;
 
+
+    }
+}
+
+void Peer::handleFileListFrame(Frame * fileListFrame)
+{
+    std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(fileListFrame);
+
+    for (int i = 0 ; i < (int)fileInfos.size(); i++)
+    {
+        FileInfo f = fileInfos[i];
+        cout << "Got file name" << f.fileName << endl;
+        cout << "Got file num" << f.fileNum << endl;
+        cout << "Got chunk count" << f.chunkCount << endl;
+
+        if (!fileList_.contains(&f))
+        {
+            FileInfo * newFile = new FileInfo(f);
+            fileList_.files.push_back(newFile);
+        }
+
+        // for each peer, if we don't have chunk info for a file, request it
+        for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
+        {
+            Peer * p = (*peers_)[i];
+            if (!p->haveChunkInfo(f.fileNum))
+            {
+                Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
+                p->sendFrame(chunkInfoRequest);
+            }
+        }
 
     }
 }
@@ -463,11 +483,20 @@ int Peer::insert(string fileName)
 int
 Peer::getChunkCount(char fileNum)
 {
-    int totalChunks;
-    for (int i; i < chunkSize; i++)
-    {
-        totalChunks += (int)chunkMap_[fileNum][i];
-    }
+    // TODO: fill this in if necessary
+    return 0;
+}
+
+bool
+Peer::haveChunkInfo(char fileNum)
+{
+    return haveChunkInfo_[fileNum];
+}
+
+void
+Peer::setHaveChunkInfo(const char fileNum, const bool value)
+{
+   haveChunkInfo_.insert(std::make_pair(fileNum, value));
 }
 
 int
@@ -475,7 +504,7 @@ Peer::query(Status& status)
 {
     status.setNumFiles(fileList_.files.size());
 
-    for (int fileIdx; fileIdx < (int)fileList_.files.size(); fileIdx++)
+    for (int fileIdx = 0; fileIdx < (int)fileList_.files.size(); fileIdx++)
     {
         FileInfo * file = fileList_.files.at(fileIdx);
 
@@ -495,7 +524,7 @@ Peer::query(Status& status)
         // _system
         int maxPeerChunkCount = 0;
         int totalChunkCountInAllPeers = 0;
-        for (int peerIdx; peerIdx < peers_->getPeerCount(); peerIdx++)
+        for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
         {
             Peer * peer = peers_->getPeers()[peerIdx];
             if (peer->getPeerNumber() == this->getPeerNumber()) continue;
@@ -540,24 +569,43 @@ int Peer::leave()
 
 int Peer::join()
 {
-    // request a file list from a peer
-    FileListRequestFrame * frame = new FileListRequestFrame();
+    peers_->connection_ = new Connection();
+    receiveq_ = new ThreadSafeQueue<Request>();
+    //peers_->addPeer(this);
 
-    for (int i; i < maxPeers; i++)
+
+    if (peers_->connection_->startServer(port_, receiveq_))
     {
-        Peer * p = (*peers_)[i];
+        cerr << "FAILED TO START THE SERVER." << endl;
+    }
+
+    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+
+
+    // for each file in each peer, set a value to say that we don't have chunk info for the file
+    for (int i = 0; i < peers_->getPeerCount(); i++)
+    {
+        Peer * peer = (*peers_)[i];
+        for (int fileIdx = 0; i < peer->getFileInfoList().files.size(); fileIdx++)
+        {
+            FileInfo * f = getFileInfoList().files[i];
+            peer->setHaveChunkInfo(f->fileNum, false);
+        }
 
     }
 
-    (*peers_)[0]->sendFrame(frame);
+    // request a file list from a peer
+    FileListRequestFrame * frame = new FileListRequestFrame();
+    for (int i = 0; i < maxPeers; i++)
+    {
+        Peer * p = (*peers_)[i];
+        if (p->state_ == ONLINE)
+        {
+            p->sendFrame(frame);
+            break;
+        }
+    }
 
-
-    // if peer doesn't return a FILE_LIST_DECLINE,
-        // update local file list
-
-
-
-    peers_->addPeer(this);
     return errOK;
 }
 
@@ -586,10 +634,16 @@ string Peer::getPort()
     return port_;
 }
 
-map<char, map<int, int> > Peer::getChunkMap()
+FileInfoList
+Peer::getFileInfoList()
 {
-    return chunkMap_;
+    return fileList_;
 }
+
+//map<char, map<int, bool> > Peer::getFileChunkMap()
+//{
+//    return fileChunkMap_;
+//}
 
 int 
 Peer::connect(){
