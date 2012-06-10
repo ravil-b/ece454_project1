@@ -1,5 +1,18 @@
 Serialized Message Formats
 
+// HANDSHAKE_REQUEST
+
+| messageType |
+---------------
+|     char    |
+
+// HANDSHAKE_RESPONSE
+
+| messageType |     ip      |    port    |
+------------------------------------------
+|     char    |   char[15]  |    short   |
+
+
 // CHUNK
 
 | messageType | fileNum | chunkNum |         data         |
