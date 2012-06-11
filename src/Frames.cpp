@@ -31,7 +31,7 @@ namespace portAndIp_serialization{
 
     void setPort(std::string port, char *serializedData)
     {
-	strcpy(serializedData + sizeof(char) * 16, port.c_str());
+        strcpy(serializedData + sizeof(char) * 16, port.c_str());
     }
 
     std::string getPort(char *serializedData)
@@ -268,23 +268,11 @@ namespace chunkInfo_serialization
 namespace chunkInfoRequest_serialization
 {
     Frame *
-    createChunkInfoRequest(std::string ip, std::string port)
+    createChunkInfoRequest()
     {
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
-	portAndIp_serialization::setIp(ip, newFrame->serializedData);
-	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;
-    }
-
-    std::string getIp(Frame * frame)
-    {
-        return portAndIp_serialization::getIp(frame->serializedData);
-    }
-
-    std::string getPort(Frame * frame)
-    {
-        return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
@@ -411,8 +399,8 @@ namespace chunkRequestDecline_serialization
 
 namespace newChunkAvailable_serialization
 {
-    const unsigned int fileNumIdx = sizeof(char) + 15 + sizeof(short);
-    const unsigned int chunkNumIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
+    const unsigned int fileNumIdx = sizeof(char) + 15 + 5;
+    const unsigned int chunkNumIdx = sizeof(char) + 15 + 5 + sizeof(char);
 
     Frame *
     createNewChunkAvailableFrame(char fileNum, int chunkNum, std::string ip, std::string port)
@@ -447,20 +435,23 @@ namespace newChunkAvailable_serialization
 
 namespace newFileAvailable_serialization
 {
-    const unsigned int fileNumIdx = sizeof(char) + 15 + sizeof(short);
-    const unsigned int chunkCountIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
-    const unsigned int fileNameIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char) + sizeof(int);
+    const unsigned int fileNumIdx = sizeof(char) + 15 + 5;
+    const unsigned int chunkCountIdx = sizeof(char) + 15 + 5 + sizeof(char);
+    const unsigned int fileNameIdx = sizeof(char) + 15 + 5 + sizeof(char) + sizeof(int);
 
     Frame *
     createNewFileAvailableFrame(FileInfo * file, std::string ip, std::string port)
     {
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::NEW_FILE_AVAILABLE;
-        chunk_serialization_helpers::setFileNum(newFrame->serializedData + fileNumIdx, file->fileNum);
-        chunk_serialization_helpers::setChunkCount(newFrame->serializedData + chunkCountIdx, file->chunkCount);
 
         portAndIp_serialization::setIp(ip, newFrame->serializedData);
-	portAndIp_serialization::setPort(port, newFrame->serializedData);
+        portAndIp_serialization::setPort(port, newFrame->serializedData);
+
+        newFrame->serializedData[fileNumIdx] = file->fileNum;
+        serialization_helpers::copyIntToCharArray(newFrame->serializedData + chunkCountIdx, file->chunkCount);
+
+
 
 
         const char *fName = file->fileName.c_str();

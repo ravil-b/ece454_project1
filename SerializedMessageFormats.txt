@@ -97,9 +97,9 @@ Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 
 
 
 // CHUNK_INFO_REQUEST
-| messageType |     ip      |    port    |
-------------------------------------------
-|     char    |   char[15]  |    short   | 
+| messageType |
+---------------
+|     char    |
 
 
 // PEER_LEAVE_NOTIFICATION

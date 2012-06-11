@@ -378,26 +378,23 @@ Peer::handleRequest(Request request)
 
             char fileNum = chunkRequestFrame_serialization::getFileNum(frame);
             int chunkNum = chunkRequestFrame_serialization::getChunkNum(frame);
-	    
-	    std::cout <<"CHUNK_REQUEST " << "fileNumber " << fileNum << std::endl;
-	    std::cout <<"CHUNK_REQUEST " << "chunkNum " << chunkNum << std::endl;
 
-	    // check if file number is valid
-	    FileInfo * fileInfo = fileInfoList_.getFileFromFileNumber(fileNum);
-	    if (fileInfo == NULL){
-		cout << "Bad file number" << endl;
-		break;
-	    }
+            // check if file number is valid
+            FileInfo * fileInfo = fileInfoList_.getFileFromFileNumber(fileNum);
+            if (fileInfo == NULL){
+                cout << "Bad file number" << endl;
+                break;
+            }
 	    
             string fileName = fileInfoList_.getFileFromFileNumber(fileNum)->fileName;
 
-	    std::cout <<"CHUNK_REQUEST " << "fileName " << fileName << std::endl;
+            std::cout <<"CHUNK_REQUEST " << "fileName " << fileName << std::endl;
 	    
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
 
             if (!fileInfoList_.getFileFromFileNumber(fileNum)->chunksDownloaded[chunkNum])
             {
-		std::cout <<"CHUNK_REQUEST " << " " << fileNum << std::endl;
+                std::cout <<"CHUNK_REQUEST DECLINE" << std::endl;
                 // we don't have this chunk, so send back a decline
                 Frame * f = chunkRequestDecline_serialization::createChunkRequestDeclineFrame(fileNum, chunkNum);
                 q->push(f);
@@ -519,10 +516,6 @@ Peer::handleRequest(Request request)
         case FrameType::CHUNK_INFO_REQUEST:
         {
             TRACE("peer.cpp", "Got CHUNK_INFO_REQUEST frame.")
-            string ip = chunkInfoRequest_serialization::getIp(frame);
-            string port = chunkInfoRequest_serialization::getPort(frame);
-
-
             vector<std::map<char, std::map<int, bool> > > fileChunkMaps;
             std::map<char, std::map<int, bool> > fileChunkMap;
 
@@ -605,16 +598,13 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
             fileInfoList_.files.push_back(newFile);
         }
 
-        string ip = (*peers_)[i]->getIpAddress();
-        string port = (*peers_)[i]->getPort();
-
         // for each peer, if we don't have chunk info for a file, request it
         for (int peerIdx = 1; peerIdx < peers_->getPeerCount(); peerIdx++)
         {
             Peer * p = (*peers_)[i];
             if (!p->haveChunkInfo(f.fileNum))
             {
-                Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest(ip, port);
+                Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
                 p->sendFrame(chunkInfoRequest);
             }
         }
@@ -708,13 +698,12 @@ int Peer::insert(string fileName)
     FileInfo * newFile = fileInfoList_.getFileFromFileName(fileName);
 
     string foundFileInList = newFile != 0 ? "found new file" : "couldn't find new file by filename!";
-
-    TRACE("peer.cpp", foundFileInList);
+    TRACE("peer.cpp:insert", foundFileInList);
 
     Frame * newFileFrame = newFileAvailable_serialization::createNewFileAvailableFrame(newFile, getIpAddress(), getPort());
+    TRACE("peer.cpp:insert", "Created NEW_FILE_AVAILABLE frame.");
 
-    TRACE("peer.cpp", "Created NEW_FILE_AVAILABLE frame.");
-
+    cout << "New file num: " << (int)newFile->fileNum << ", chunkCount: " << newFile->chunkCount << endl;
     peers_->broadcastFrame(newFileFrame, this);
 
     TRACE("peer.cpp", "Broadcasted NEW_FILE_AVAILABLE frame.");

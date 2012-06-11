@@ -189,9 +189,7 @@ namespace chunkInfo_serialization
 namespace chunkInfoRequest_serialization
 {
     Frame *
-    createChunkInfoRequest(std::string ip, std::string port);
-    std::string getIp(Frame * frame);
-    std::string getPort(Frame * frame);
+    createChunkInfoRequest();
 };
 
 #endif
