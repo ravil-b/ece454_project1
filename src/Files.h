@@ -10,6 +10,7 @@ struct FileInfo // stores info about a file
     std::string fileName;
     char fileNum;
     int chunkCount;
+    int fileSize;
     std::map<int, bool> chunksDownloaded;
 
     FileInfo();

@@ -394,7 +394,14 @@ Peer::handleRequest(Request request)
             fileChunkIO_->writeChunk(
                     p.string(),
                     chunkNum,
-                    chunk);
+                    chunk,
+                    65536); /// TODO Fill in the file size
+	    
+	    // get a map of chunks downloaded for this file
+	    map<int, bool> *chunksDownloaded = 
+		&(fileInfoList_.getFileFromFileNumber(fileNum)->chunksDownloaded);
+	    (*chunksDownloaded)[chunkNum] = true;
+	    numChunksRequested_[fileNum]--;
         }
         break;
 
@@ -503,6 +510,7 @@ Peer::handleRequest(Request request)
             // update local file list
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
+	    newFile->fileSize = newFile->chunkCount * chunkSize;
 	    cout << "Chunks total: " << newFile->chunkCount << endl;
             fileInfoList_.files.push_back(newFile);
             numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
@@ -1054,3 +1062,4 @@ Peer::downloadLoop(){
 	}
     }
 }
+

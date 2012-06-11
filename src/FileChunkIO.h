@@ -15,8 +15,8 @@ class FileChunkIO
 {
 public:
     int readChunk(std::string fileName, int chunkNum, char * buffer);
-    int writeChunk(std::string fileName, int chunkNum, char * chunkData);
-
+    int writeChunk(std::string fileName, int chunkNum, char * chunkData, int fileSize);
+    void createFileIfNotExists(std::string fileName, int fileSize);
 };
 
 const int errFileChunkIOOK = 0;

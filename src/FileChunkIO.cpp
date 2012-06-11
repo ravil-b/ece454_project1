@@ -34,7 +34,7 @@ FileChunkIO::readChunk(std::string fileName, int chunkNum, char * buffer)
         cout << fileName << " appears to be missing!" << endl;
         return errFileChunkRead;
     }
-
+    
     try
     {
         file_source localFile(fileName, BOOST_IOS::binary);
@@ -52,7 +52,7 @@ FileChunkIO::readChunk(std::string fileName, int chunkNum, char * buffer)
 }
 
 int
-FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData)
+FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData, int fileSize)
 {
     while (writers > 0); // block
 
@@ -60,6 +60,7 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData)
 
     try
     {
+	createFileIfNotExists(fileName, fileSize);
         file_sink localFile(fileName, std::ios_base::out);
         boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
         //streamsize result = 
@@ -71,4 +72,17 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData)
         return errFileChunkRead;
     }
     return errFileChunkIOOK;
+}
+
+void 
+FileChunkIO::createFileIfNotExists(std::string fileName, int fileSize){
+    filesystem::path p(fileName);
+    // if the file doesn't exist, create it with the max size;
+    if (!exists(p)){
+	file_sink localFile(fileName, std::ios_base::out);
+	boost::iostreams::seek(localFile, fileSize - 1, BOOST_IOS::beg);
+	char data[1];
+	data[0] = 0;
+	boost::iostreams::write(localFile, data, 1);
+    }
 }
