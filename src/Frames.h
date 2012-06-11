@@ -53,7 +53,9 @@ struct FrameType
         NEW_CHUNK_AVAILABLE =   11,
 
         CHUNK_INFO =            12,
-        CHUNK_INFO_REQUEST =    13
+        CHUNK_INFO_REQUEST =    13,
+
+	PEER_LEAVE_NOTIFICATION = 14
     };
 };
 
@@ -95,6 +97,11 @@ namespace frame_function{
     std::string getPort(char *serializedData);
     void setIp(std::string ip, char *serializedDatxa);
     void setPort(char *serializedData);
+};
+
+namespace peerLeavingFrame_serialization{
+    Frame *
+    createPeerLeavingFrame(std::string ip, std::string port);
 };
 
 namespace fileListFrame_serialization{

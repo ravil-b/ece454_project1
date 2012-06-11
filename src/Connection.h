@@ -109,6 +109,7 @@ class Connection {
     void endSession(unsigned int sessionId);
     bool isConnected(unsigned int sessionId);
     int startServer(const std::string &port, ThreadSafeQueue<Request> *receiveQ);
+    
     ThreadSafeQueue<Frame *> *getReplyQueue(unsigned int requestId);
     unsigned int generateSessionId();
     ThreadSafeQueue<Frame *> *addSession(unsigned int sessionId, 

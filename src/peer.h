@@ -75,6 +75,8 @@ public:
 
     int connect();
     void disconnect();
+    // socket will be closed after it processess the remaining frames.
+    void stopConnection();
 
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
 		 ERROR_STATE, WAITING_FOR_HANDSHAKE, ONLINE, OFFLINE } state_;
@@ -93,8 +95,6 @@ private:
 
     Peers *peers_;
     FileChunkIO * chunkIO_;
-
-
 
     // When not null, this queue indicates that a connection with a peer
     // is established and it can be used to send the information to it.
@@ -117,7 +117,6 @@ private:
 
     // Mutex to protect connect/disconnect
     boost::mutex connectionMutex_;
-
 };
 
 // Peers is a dumb container to hold the peers; the number of peers is fixed,

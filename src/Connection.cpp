@@ -96,12 +96,13 @@ Session::setSendQ(ThreadSafeQueue<Frame *> *sendQ){
 void 
 Session::start(){
     TRACE("Connection.cpp", "Starting the new session");
-    incomingFrame_ = new Frame();
-    socket_->async_read_some(boost::asio::buffer(incomingFrame_->serializedData, FRAME_LENGTH),
-    			    boost::bind(&Session::handleRead, shared_from_this(),
-    					boost::asio::placeholders::error,
-    					boost::asio::placeholders::bytes_transferred));
-
+    if (receiveQ_ != NULL){
+	incomingFrame_ = new Frame();
+	socket_->async_read_some(boost::asio::buffer(incomingFrame_->serializedData, FRAME_LENGTH),
+				 boost::bind(&Session::handleRead, shared_from_this(),
+					     boost::asio::placeholders::error,
+					     boost::asio::placeholders::bytes_transferred));
+    }
     if (sendQ_ != NULL && !writeStarted_){
 	writeStarted_ = true;
 	startWriteThread_ = new boost::thread(boost::bind(&Session::startWrite, 
@@ -115,19 +116,9 @@ void
 Session::handleRead(const boost::system::error_code& error, size_t bytesTransferred){
     if (!error){
 	if ((bytesTransferred + incomingFrameIndex_) < (unsigned)FRAME_LENGTH){
-	    char buf[10]; 
-	    sprintf(buf, "%d", incomingFrame_->serializedData[0]);
-	    std::cout << "FIRST CHAR IS " << buf << std::endl;
-	    std::cerr << "Still incomplete frame" << std::endl;
-	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
 	    incomingFrameIndex_ += bytesTransferred;
 	}
 	else{
-	    std::cerr << "Complete frame?" << std::endl;
-	    std::cerr << "Received " << bytesTransferred + incomingFrameIndex_ << " bytes " << std::endl;
-	    char buf[10]; 
-	    sprintf(buf, "%d", incomingFrame_->serializedData[0]);
-	    std::cout << "FIRST CHAR IS " << buf << std::endl;
 	    incomingFrameIndex_ = 0;
 	    Request newRequest;
 	    newRequest.requestId = sessionId_;
@@ -145,14 +136,14 @@ Session::handleRead(const boost::system::error_code& error, size_t bytesTransfer
 	    startWriteThread_ = new boost::thread(boost::bind(&Session::startWrite, 
 							      shared_from_this()));
 	}		
-	
-	socket_->async_read_some(boost::asio::buffer(
-	    incomingFrame_->serializedData + incomingFrameIndex_, 
-	    FRAME_LENGTH - incomingFrameIndex_),
-				 boost::bind(&Session::handleRead, shared_from_this(),
-					     boost::asio::placeholders::error,
-					     boost::asio::placeholders::bytes_transferred));
-	
+	if (receiveQ_ != NULL){
+	    socket_->async_read_some(boost::asio::buffer(
+							 incomingFrame_->serializedData + incomingFrameIndex_, 
+							 FRAME_LENGTH - incomingFrameIndex_),
+				     boost::bind(&Session::handleRead, shared_from_this(),
+						 boost::asio::placeholders::error,
+						 boost::asio::placeholders::bytes_transferred));
+	}
     }
     else{ 
 	std::cerr << "Socket read error" << std::endl;
@@ -186,6 +177,8 @@ Session::startWrite(){
 	// likely because the io_service still holds a reference to socket_.
 	// Let it try to send something, and get an error. After thism the session
 	// will be destructed.
+	// Close the socket, as well.
+	socket()->shutdown(tcp::socket::shutdown_both);
 	boost::asio::async_write(*socket_,
 				 boost::asio::buffer("\0", 1),
 				 boost::bind(&Session::handleWrite, shared_from_this(),
@@ -316,6 +309,7 @@ Connection::connect(const std::string &ip, const std::string &port,
 	return retVal;
     }
     *sessionId = generateSessionId();
+    
     boost::shared_ptr<Session> newSession = Session::create(*sessionId, this, 
 							    newSocket, receiveQ_, sendQ);
     sessionIdAndSessionMap_.insert(std::make_pair(*sessionId, newSession.get()));

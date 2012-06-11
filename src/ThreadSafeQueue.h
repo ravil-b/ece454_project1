@@ -32,6 +32,9 @@ class ThreadSafeQueue {
     // until more data is popped from the queue.
     void push(T const &data){
 	boost::mutex::scoped_lock lock(dataMutex_);
+	if (stopReading_){
+	    return;
+	}
 	while (q_.size() == (unsigned)maxSize_){
 	    notFull_.wait(lock);
 	}

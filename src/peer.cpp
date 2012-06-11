@@ -73,7 +73,7 @@ Peers::initialize(){
 	// Once all peers are initialized, finish initializing the local
 	// storage of file.
 	if (peers_[0]->initLocalFileStore() != 0){
-	    cerr << "CANNOT INITIALIZE LOCAL FILE STORAFE. Quitting." << endl;
+	    cerr << "CANNOT INITIALIZE LOCAL FILE STORAGE. Quitting." << endl;
 	    // TODO exit the program
 	}
 	return errOK;
@@ -261,19 +261,12 @@ Peer::initRemotePeer(){
     return errOK;
 }
 
+// Check if the local storage directory exists. Create if it doesn't
 int 
 Peer::initLocalFileStore(){
-    // Assemble the file list request frame and broadcast it to everyone
-    Frame * requestFrame = fileListRequestFrame_serialization::createFileListRequest();
-    bool frameSent = false;
-    while(!frameSent){
-	for (int i = 1; i < maxPeers; i++){
-	    if ((*peers_)[i]->state_ == ONLINE){
-		(*peers_)[i]->sendFrame(requestFrame);
-		frameSent = true;
-		break;
-	    }
-	}
+    filesystem::path pathToLocalStore(LOCAL_STORAGE_PATH_NAME);
+    if (!exists(pathToLocalStore)){
+	boost::filesystem::create_directories(pathToLocalStore);
     }
     return errOK;
 }
@@ -290,9 +283,10 @@ Peer::acceptConnections(){
     while(receiveq_->pop(&request)){
         handleRequest(request);
     }
-
+    TRACE("peer.cpp", "Stopping to accept connections.");
+    // TODO stop the server
     delete request.frame;
-    delete receiveq_;
+    //delete receiveq_;
 }
 
 
@@ -539,6 +533,7 @@ Peer::pushNewFile(std::string fileName)
 
 }
 
+// Insert a file into the system
 int Peer::insert(string fileName)
 {
     filesystem::path pathToNewFile(fileName);
@@ -552,6 +547,7 @@ int Peer::insert(string fileName)
         pathToLocalStore /= pathToNewFile.filename().string();
 
         filesystem::copy_file(pathToNewFile, pathToLocalStore, filesystem::copy_option::overwrite_if_exists);
+
     }
     catch (std::exception& e)
     {
@@ -638,14 +634,28 @@ Peer::query(Status& status)
 
 int Peer::leave()
 {
+    TRACE("peer.cpp", "Leaving the network.");
     // inform peers that this peer is leaving
+    Frame * f = peerLeavingFrame_serialization::createPeerLeavingFrame(
+        getIpAddress(), getPort());
+    peers_->broadcastFrame(f, this);
+    
+    // Tell every peer that they need to close connections after all frames are sent
+    for (int i = 1; i < maxPeers; i++){
+	if ((*peers_)[i]->state_ == ONLINE){
+	    (*peers_)[i]->stopConnection();
+	}
+    }
+
+    // Start shutting down own connections
+    //receiveq_->stopReading();
 
     // check if this peer has chunks that no one else has
-        // if so, push those out
-
+    // if so, push those out
+    
     // close down server/client sockets
 
-    peers_->removePeer(this);
+    ///peers_->removePeer(this);
     return errOK;
 }
 
@@ -745,4 +755,9 @@ Peer::disconnect(){
     // TODO remote all frames from sendq if it is not emmpty
     delete sendq_;
     sendq_ = NULL;
+}
+
+void 
+Peer::stopConnection(){
+    sendq_->stopReading();
 }

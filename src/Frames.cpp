@@ -262,8 +262,8 @@ namespace serialization_helpers{
     void
     copyShortToCharArray(char * array, short toCopy)
     {
+	array[1] = (toCopy>>8)  & 0xff;
         array[0] = toCopy & 0xff;
-        array[1] = (toCopy>>8)  & 0xff;
     }
 }
 
@@ -379,5 +379,20 @@ namespace handshakeResponseFrame_serialization
 
         sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + 16));
         return std::string(portStr, 5);
+    }
+}
+
+
+
+namespace peerLeavingFrame_serialization{
+    Frame *
+    createPeerLeavingFrame(std::string ip, std::string port){
+	Frame * newFrame = new Frame();
+        newFrame->serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
+        strcpy(newFrame->serializedData + sizeof(char), ip.c_str());
+
+
+        serialization_helpers::copyShortToCharArray(newFrame->serializedData + 16, (short)atoi(port.c_str()));
+        return newFrame;;
     }
 }
