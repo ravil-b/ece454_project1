@@ -16,6 +16,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/thread.hpp>
+#include <boost/foreach.hpp>
 #include <string.h>
 
 
@@ -219,6 +220,24 @@ Peer::initLocalPeer(){
     sendq_ = NULL;
     chunkIO_ = new FileChunkIO();
 
+    if (peers_->connection_->startServer(port_, receiveq_))
+       {
+           cerr << "FAILED TO START THE SERVER." << endl;
+       }
+
+    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+
+    // request a file list from a peer
+    Frame * frame = fileListRequestFrame_serialization::createFileListRequest();
+    for (int i = 0; i < maxPeers; i++)
+    {
+        Peer * p = (*peers_)[i];
+        if (p->state_ == ONLINE)
+        {
+            p->sendFrame(frame);
+            break;
+        }
+    }
 
     return errOK;
 }
@@ -446,17 +465,78 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
         }
 
         // for each peer, if we don't have chunk info for a file, request it
-        for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
+        for (int peerIdx = 1; peerIdx < peers_->getPeerCount(); peerIdx++)
         {
             Peer * p = (*peers_)[i];
             if (!p->haveChunkInfo(f.fileNum))
             {
+                // TODO: fill in params for createChunkInfoRequest()
                 Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
                 p->sendFrame(chunkInfoRequest);
             }
         }
+    }
+
+
+    // call load local files from disk on new thread
+
+}
+
+char
+Peer::getMaxFileNum()
+{
+    char maxFileNum = 0;
+    for (int i = 0; i < this->fileList_.files.size(); i++)
+    {
+        FileInfo * f = fileList_.files[i];
+        if (f->fileNum > maxFileNum)
+            maxFileNum = f->fileNum;
 
     }
+    return maxFileNum;
+}
+
+void
+Peer::loadLocalFilesFromDisk()
+{
+    boost::filesystem::path targetDir(localStoragePath);
+    boost::filesystem::directory_iterator it(targetDir), eod;
+
+    BOOST_FOREACH(boost::filesystem::path const &p, std::make_pair(it, eod))
+    {
+        loadLocalFileFromDisk(p);
+    }
+}
+
+void
+Peer::loadLocalFileFromDisk(boost::filesystem::path path)
+{
+    if(is_regular_file(path))
+    {
+        FileInfo * f = new FileInfo();
+        unsigned int fileSize = boost::filesystem::file_size(path);
+
+        f->fileName = path.filename().string();
+        f->chunkCount = fileSize/chunkSize;
+        if (fileSize % chunkSize == 0)
+        {
+            f->chunkCount ++;
+        }
+        f->fileNum = getMaxFileNum() + 1;
+
+        for (int i = 0; i < f->chunkCount; i++)
+        {
+            f->chunksDownloaded[i] = true;
+        }
+
+        fileList_.files.push_back(f);
+    }
+}
+
+void
+Peer::pushNewFile(std::string fileName)
+{
+
 }
 
 int Peer::insert(string fileName)
@@ -573,15 +653,8 @@ int Peer::join()
 {
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
-    //peers_->addPeer(this);
 
-
-    if (peers_->connection_->startServer(port_, receiveq_))
-    {
-        cerr << "FAILED TO START THE SERVER." << endl;
-    }
-
-    incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
+    initPeer();
 
 
     // for each file in each peer, set a value to say that we don't have chunk info for the file
@@ -593,20 +666,9 @@ int Peer::join()
             FileInfo * f = getFileInfoList().files[i];
             peer->setHaveChunkInfo(f->fileNum, false);
         }
-
     }
 
-    // request a file list from a peer
-    FileListRequestFrame * frame = new FileListRequestFrame();
-    for (int i = 0; i < maxPeers; i++)
-    {
-        Peer * p = (*peers_)[i];
-        if (p->state_ == ONLINE)
-        {
-            p->sendFrame(frame);
-            break;
-        }
-    }
+
 
     return errOK;
 }

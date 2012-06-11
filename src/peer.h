@@ -27,6 +27,8 @@
 #include "FileChunkIO.h"
 #include "Files.h"
 
+#include <boost/filesystem.hpp>
+
 using namespace std;
 
 
@@ -108,6 +110,10 @@ private:
     void acceptConnections();
     void handleRequest(Request request);
     void handleFileListFrame(Frame * fileListFrame);
+    void pushNewFile(std::string fileName);
+    void loadLocalFilesFromDisk();
+    void loadLocalFileFromDisk(boost::filesystem::path p);
+    char getMaxFileNum();
 
     // Mutex to protect connect/disconnect
     boost::mutex connectionMutex_;
