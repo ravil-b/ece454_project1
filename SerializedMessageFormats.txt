@@ -9,9 +9,9 @@ Serialized Message Formats
 
 // HANDSHAKE_RESPONSE
 
-| messageType |     ip      |    port    |
-------------------------------------------
-|     char    |   char[15]  |    short   |
+| messageType |     ip      |   port   |
+----------------------------------------
+|     char    |   char[15]  |  char[5] |
 
 
 // CHUNK
@@ -79,7 +79,7 @@ Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 
 
 | messageType |     ip      |    port    |   fileNum   |   chunkCount   |    fileName   |
 -----------------------------------------------------------------------------------------
-|     char    |   char[15]  |    short   |    char     |      int       |   char[512]   |
+|     char    |   char[15]  |   char[5]  |    char     |      int       |   char[512]   |
 
 
 
@@ -87,13 +87,13 @@ Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 
 
 | messageType |     ip      |    port    |   fileNum   |  chunkNum  |
 ---------------------------------------------------------------------
-|     char    |   char[15]  |    short   |     char    |    int     |
+|     char    |   char[15]  |   char[5]  |     char    |    int     |
 
 
 // CHUNK_INFO
 | messageType |     ip      |    port    |  fileCount  |   fileNum1  |   chunks1    |   fileNum2  |   chunks2   | ... |   fileNum15  |   chunks15   |
 -----------------------------------------------------------------------------------------------------------
-|     char    |   char[15]  |    short   |     char    |     char    |  byte[4096]  |     char    | byte[4096]  | ... |     char     |  byte[4096]  |
+|     char    |   char[15]  |   char[5]  |     char    |     char    |  byte[4096]  |     char    | byte[4096]  | ... |     char     |  byte[4096]  |
 
 
 // CHUNK_INFO_REQUEST
@@ -105,6 +105,6 @@ Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 
 // PEER_LEAVE_NOTIFICATION
 | messageType |     ip      |    port    |
 ------------------------------------------
-|     char    |   char[15]  |    short   | 
+|     char    |   char[15]  |   char[5]  | 
 
 

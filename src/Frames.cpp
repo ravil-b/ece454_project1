@@ -11,6 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
+#include <bitset>
 
 
 char
@@ -182,8 +184,19 @@ namespace handshakeResponseFrame_serialization
 namespace chunkInfo_serialization
 {
 
-    const unsigned int fileCountIdx = sizeof(char) + 15 + sizeof(short);
-    const unsigned int chunkInfoStartIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
+
+//                unsigned char b = 0;
+//                b |= (chunkMap[fileIter->first][chunkNum] & 1) << 7;
+//                b |= (chunkMap[fileIter->first][chunkNum + 1] & 1) << 6;
+//                b |= (chunkMap[fileIter->first][chunkNum + 2] & 1) << 5;
+//                b |= (chunkMap[fileIter->first][chunkNum + 3] & 1) << 4;
+//                b |= (chunkMap[fileIter->first][chunkNum + 4] & 1) << 3;
+//                b |= (chunkMap[fileIter->first][chunkNum + 5] & 1) << 2;
+//                b |= (chunkMap[fileIter->first][chunkNum + 6] & 1) << 1;
+//                b |= (chunkMap[fileIter->first][chunkNum + 7] & 1) << 0;
+
+    const unsigned int fileCountIdx = sizeof(char) + 15 + 5;
+    const unsigned int chunkInfoStartIdx = sizeof(char) + 15 + 5 + sizeof(char);
 
     // { filenumber: { chunkNumber: chunkAvailable } }
     Frame *
@@ -192,32 +205,42 @@ namespace chunkInfo_serialization
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO;
 
-	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+        portAndIp_serialization::setIp(ip, newFrame->serializedData);
         portAndIp_serialization::setPort(port, newFrame->serializedData);
 
         newFrame->serializedData[fileCountIdx] = fileCount;
 
-        for (char fileIdx=0; fileIdx < fileCount; fileIdx++)
+        std::map<char, std::map<int, bool> >::iterator fileIter;
+
+        int fileCounter = 0;
+        int bytesPerFile = (maxChunksPerFile/8) + 1;
+        for (fileIter = chunkMap.begin(); fileIter != chunkMap.end(); ++fileIter)
         {
+            // set fileNum
+            newFrame->serializedData[chunkInfoStartIdx + fileCounter*(bytesPerFile)] = fileIter->first;
+
             for (unsigned int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
             {
-                unsigned char b = 0;
-                b |= (chunkMap[fileIdx][chunkNum] & 1) << 8;
-                b |= (chunkMap[fileIdx][chunkNum + 1] & 1) << 7;
-                b |= (chunkMap[fileIdx][chunkNum + 2] & 1) << 6;
-                b |= (chunkMap[fileIdx][chunkNum + 3] & 1) << 5;
-                b |= (chunkMap[fileIdx][chunkNum + 4] & 1) << 4;
-                b |= (chunkMap[fileIdx][chunkNum + 5] & 1) << 3;
-                b |= (chunkMap[fileIdx][chunkNum + 6] & 1) << 2;
-                b |= (chunkMap[fileIdx][chunkNum + 7] & 1) << 1;
-                b |= (chunkMap[fileIdx][chunkNum + 8] & 1) << 0;
+                std::bitset<8> bits;
+                for (unsigned int bitIdx = 0; bitIdx < 8; bitIdx++)
+                {
+                    if (chunkMap[fileIter->first][chunkNum + bitIdx])
+                    {
+                        bits.set(7 - bitIdx);
+                    }
+                }
 
-                newFrame->serializedData[chunkInfoStartIdx + (chunkNum / 8)] = (char)b;
+                int chunkIdx = chunkInfoStartIdx + (fileCounter * bytesPerFile) + 1 + (chunkNum / 8);
+                newFrame->serializedData[chunkIdx] = (unsigned char)bits.to_ulong();
             }
+            fileCounter++;
         }
 
         return newFrame;
     }
+
+
+
 
     char
     getFileCount(Frame * frame)
@@ -228,30 +251,33 @@ namespace chunkInfo_serialization
     std::map<char, std::map<int, bool> >
     getChunkMap(Frame * frame)
     {
-        std::map<char, std::map<int, bool> > chunkMap;
+        std::map<char, std::map<int, bool> > fileMap;
 
-        for (char fileIdx; fileIdx < getFileCount(frame); fileIdx++)
+        int bytesPerFile = (maxChunksPerFile/8) + 1;
+        for (char fileCounter; fileCounter < getFileCount(frame); fileCounter++)
         {
-            std::map<int, bool> fileMap;
+            std::map<int, bool> chunkMap;
 
+            char fileNum = frame->serializedData[chunkInfoStartIdx + fileCounter*(bytesPerFile)];
             for (unsigned int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
             {
-                unsigned char b = frame->serializedData[chunkNum / 8];
+                int chunkIdx = chunkInfoStartIdx + (fileCounter * bytesPerFile) + 1 + (chunkNum / 8);
+                std::bitset<8> bits((unsigned char)frame->serializedData[chunkIdx]);
 
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 8) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 7) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 6) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 5) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 4) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 3) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 2) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 1) & 1));
-                fileMap.insert(std::make_pair(chunkNum, (bool)(b >> 0) & 1));
+//                std::cout << "DESERIALIZING." << std::endl;
+//                std::cout   << "chunkIdx: " << chunkIdx
+//                            << " value: " << (int) frame->serializedData[chunkIdx]
+//                            << " bits: " << bits << std::endl;
+
+                for (unsigned int bitIdx = 0; bitIdx < 8; bitIdx++)
+                {
+                    chunkMap.insert(std::make_pair(chunkNum + bitIdx, (bool)bits[7 - bitIdx]));
+                }
             }
 
-            chunkMap.insert(std::make_pair(fileIdx, fileMap));
+            fileMap.insert(std::make_pair(fileNum, chunkMap));
         }
-        return chunkMap;
+        return fileMap;
     }
 
     std::string getIp(Frame * frame)

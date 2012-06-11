@@ -14,6 +14,7 @@ const int maxFiles  = 100;    // Cheesy, but allows us to do a simple Status cla
 
 const unsigned long maxFileSize = 2 * 1024 * 1024 * 1024;
 const unsigned int maxChunksPerFile = maxFileSize / chunkSize;
+const unsigned int maxBytesPerChunkInChunkInfo = maxChunksPerFile / 8;
 
 const std::string localStoragePath = "./localStorage/";
 

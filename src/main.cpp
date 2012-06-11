@@ -23,7 +23,8 @@ Entry point of the application.
 //#include "Client.h"
 //#include "Server.h"
 #include "peer.h"
-
+#include "Frames.h"
+#include "Globals.h"
 #include "ThreadSafeQueue.h"
 #include "Connection.h"
 #include "FileChunkIO.h"
@@ -32,6 +33,8 @@ Entry point of the application.
 #include <vector>
 
 #include <stdio.h>
+
+using namespace std;
 
 // CLI Example begin
 class Temp : public CliCmdHandler{
@@ -99,7 +102,89 @@ producer(ThreadSafeQueue<Frame *> *tq, int num){
 }
 // Connection example end
 
-int 
+void printFrame(Frame * frame, int maxBytesToPrint)
+{
+
+    cout << "Printing frame" << endl;
+    cout << "Frame Type: " << frame->getFrameType() << endl;
+    for (int i = 0; i < maxBytesToPrint; i++)
+    {
+        cout << i << ": " << (int)frame->serializedData[i] << endl;
+    }
+}
+
+void
+testChunkInfoSerialization()
+{
+    map<char, map<int, bool> > fileMap;
+        map<int, bool> chunkMap1;
+
+        for (int i = 0; i < chunkSize; i++)
+        {
+            chunkMap1.insert(make_pair(i, (i % 2 == 0))); // create a string of: 1, 0, 1, 0, ...
+
+        }
+        fileMap.insert(make_pair(1, chunkMap1));
+
+        map<int, bool> chunkMap2;
+        for (int i = 0; i < chunkSize; i++)
+        {
+            chunkMap2.insert(make_pair(i, (i % 2 != 0))); // create a string of: 0, 1, 0, 1, ...
+        }
+        fileMap.insert(make_pair(2, chunkMap2));
+
+        map<int, bool> chunkMap3;
+        for (int i = 0; i < chunkSize; i++)
+        {
+            chunkMap3.insert(make_pair(i, (i % 2 == 0))); // create a string of: 1, 0, 1, 0, ...
+        }
+        fileMap.insert(make_pair(4, chunkMap3));
+
+
+        Frame * chunkInfoFrame = chunkInfo_serialization::createChunkInfoFrame(3, "localhost", "4444", fileMap);
+        map<char, map<int, bool> > deserializedFileMap = chunkInfo_serialization::getChunkMap(chunkInfoFrame);
+
+        cout << "Deserialized Chunk Map. Checking values..." << endl;
+
+        map<int, bool> dsChunkMap1 = deserializedFileMap[1];
+        for (int i = 0; i < maxBytesPerChunkInChunkInfo; i++)
+        {
+            if (dsChunkMap1[i] != (i % 2 == 0)) // should be string of: 1, 0, 1, 0, ...
+            {
+                cout << "PROBLEM with ds chunk map 1 at i = " << i << endl;
+                cout << "Should be " << (int)(i % 2 == 0) << " but is " << dsChunkMap1[i] << endl;
+                printFrame(chunkInfoFrame, i);
+                break;
+
+            }
+
+        }
+
+        map<int, bool> dsChunkMap2 = deserializedFileMap[2];
+        for (int i = 0; i < maxBytesPerChunkInChunkInfo; i++)
+        {
+            if ((dsChunkMap2[i] == (i % 2 == 0))) // should be string of: 0, 1, 0, 1, ...
+            {
+                cout << "PROBLEM with ds chunk map 2 at i = " << i << endl;
+                cout << "Should be " << (int)(i % 2 != 0) << " but is " << dsChunkMap2[i] << endl;
+                break;
+            }
+        }
+
+
+        map<int, bool> dsChunkMap3 = deserializedFileMap[4];
+        for (int i = 0; i < maxBytesPerChunkInChunkInfo; i++)
+        {
+            if ((dsChunkMap3[i] != (i % 2 != 0))) // should be string of: 1, 0, 1, 0, ...
+            {
+                cout << "PROBLEM with ds chunk map 3 at i = " << i << endl;
+                cout << "Should be " << (int)(i % 2 == 0) << " but is " << dsChunkMap3[i] << endl;
+                break;
+            }
+        }
+}
+
+int
 main(int argc, char* argv[]){
     TRACE("main.cpp", "Starting up.");
 
@@ -111,6 +196,11 @@ main(int argc, char* argv[]){
     TRACE("main.cpp", "Initializing Peers");
     Peers *peers = new Peers(cli, "peers.txt");
     boost::thread peersThread(boost::bind(&Peers::initialize, peers));
+
+
+
+
+
 
 
     TRACE("main.cpp", "Adding CLI Commands");

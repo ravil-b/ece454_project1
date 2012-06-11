@@ -71,7 +71,8 @@ public:
     int getChunkCount(char fileNum);
 
 
-    bool haveChunkInfoForAllFiles();
+    //bool haveChunkInfoForAllFiles();
+    bool haveChunkInfoForAllFilesInOnlinePeers();
     bool haveChunkInfo(char fileNum);
     void setHaveChunkInfo(char fileNum, bool value);
 
@@ -80,9 +81,9 @@ public:
     // socket will be closed after it processess the remaining frames.
     void stopConnection();
 
-    enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
-		 ERROR_STATE, WAITING_FOR_HANDSHAKE, WAITING_FOR_FILE_LIST,
-		 WAITING_FOR_CHUNK_INFO, ONLINE, OFFLINE } state_;
+    enum State { CONNECTED=0, DISCONNECTED=1, INITIALIZING=2, UNKNOWN=3,
+		 ERROR_STATE=4, WAITING_FOR_HANDSHAKE=5, WAITING_FOR_FILE_LIST=6,
+		 WAITING_FOR_CHUNK_INFO=7, ONLINE=8, OFFLINE=9} state_;
 
     void stopDownloadLoop();
 
@@ -122,6 +123,7 @@ private:
     void loadLocalFileFromDisk(boost::filesystem::path p);
     void changeStateToOnlineAndNotify();
     char getMaxFileNum();
+    void queueFileDownload(char fileNum);
     
     // The download loop where we monitor the local 
     // files and request chunks from other peers
@@ -160,7 +162,7 @@ class Peers : public CliCmdHandler {
     int getPeerCount();
     int getOnlinePeerCount();
     void broadcastFrame(Frame * frame, Peer * fromPeer);
-    Peer * getPeerFromIpAndPort(string ip, string port);
+    Peer * getRemotePeerFromIpAndPort(string ip, string port);
 
     Connection *connection_;
  private:
