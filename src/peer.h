@@ -70,6 +70,8 @@ public:
     int sendFrame(Frame * frame);
     int getChunkCount(char fileNum);
 
+
+    bool haveChunkInfoForAllFiles();
     bool haveChunkInfo(char fileNum);
     void setHaveChunkInfo(char fileNum, bool value);
 

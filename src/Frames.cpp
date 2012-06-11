@@ -501,3 +501,26 @@ namespace peerLeavingFrame_serialization{
 	return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
+
+
+namespace peerJoinNotification_serialization
+{
+    Frame *
+    createPeerJoinNotification(std::string ip, std::string port){
+        Frame * newFrame = new Frame();
+        newFrame->serializedData[0] = (char)FrameType::PEER_JOIN_NOTIFICATION;
+        portAndIp_serialization::setIp(ip, newFrame->serializedData);
+        portAndIp_serialization::setPort(port, newFrame->serializedData);
+        return newFrame;
+    }
+
+    std::string getIp(Frame * frame)
+    {
+        return portAndIp_serialization::getIp(frame->serializedData);
+    }
+
+    std::string getPort(Frame * frame)
+    {
+    return portAndIp_serialization::getPort(frame->serializedData);
+    }
+}

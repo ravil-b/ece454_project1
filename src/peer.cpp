@@ -510,6 +510,13 @@ Peer::handleRequest(Request request)
                     f->chunksDownloaded[chunkIter->first] = chunkIter->second;
                 }
             }
+
+            if (haveChunkInfoForAllFiles())
+            {
+                Frame * joinFrame = peerJoinNotification_serialization::createPeerJoinNotification(getIpAddress(), getPort());
+                peers_->broadcastFrame(joinFrame, this);
+            }
+
         }
         break;
 
@@ -571,6 +578,20 @@ Peer::handleRequest(Request request)
                 p->state_ = OFFLINE;
             }else{
                 TRACE("peer.cpp", "Received peer leave notification, but unknown peer");
+            }
+
+        }break;
+
+        case FrameType::PEER_JOIN_NOTIFICATION:
+        {
+            std::string frameIp = portAndIp_serialization::getIp(request.frame->serializedData);
+            std::string framePort = portAndIp_serialization::getPort(request.frame->serializedData);
+            Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
+            if (p != NULL){
+                TRACE("peer.cpp", "Received PEER_JOIN_NOTIFICATION. Peer now ONLINE");
+                p->state_ = ONLINE;
+            }else{
+                TRACE("peer.cpp", "Received PEER_JOIN_NOTIFICATION, but unknown peer");
             }
         }break;
 
@@ -651,9 +672,9 @@ Peer::loadLocalFileFromDisk(boost::filesystem::path path)
 
         f->fileName = path.filename().string();
         f->chunkCount = fileSize/chunkSize;
-        if (fileSize % chunkSize == 0)
+        if (fileSize % chunkSize != 0)
         {
-            f->chunkCount ++;
+            f->chunkCount++;
         }
         f->fileNum = getMaxFileNum() + 1;
 
@@ -731,6 +752,18 @@ bool
 Peer::haveChunkInfo(char fileNum)
 {
     return haveChunkInfo_[fileNum];
+}
+
+bool
+Peer::haveChunkInfoForAllFiles()
+{
+    vector<FileInfo *>::iterator fileIter = fileInfoList_.files.begin();
+    for ( ; fileIter != fileInfoList_.files.end(); fileIter++)
+    {
+        if (!haveChunkInfo((*fileIter)->fileNum))
+            return false;
+    }
+    return true;
 }
 
 void

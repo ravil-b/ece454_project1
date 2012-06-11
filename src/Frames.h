@@ -55,7 +55,8 @@ struct FrameType
         CHUNK_INFO =            12,
         CHUNK_INFO_REQUEST =    13,
 
-        PEER_LEAVE_NOTIFICATION = 14
+        PEER_LEAVE_NOTIFICATION = 14,
+        PEER_JOIN_NOTIFICATION = 15
     };
 };
 
@@ -109,10 +110,7 @@ namespace portAndIp_serialization{
     void setPort(char *serializedData);
 };
 
-namespace peerLeavingFrame_serialization{
-    Frame *
-    createPeerLeavingFrame(std::string ip, std::string port);
-};
+
 
 namespace fileListFrame_serialization{
     Frame *
@@ -191,6 +189,21 @@ namespace chunkInfoRequest_serialization
     Frame *
     createChunkInfoRequest();
 };
+
+namespace peerLeavingFrame_serialization{
+    Frame *
+    createPeerLeavingFrame(std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
+};
+
+namespace peerJoinNotification_serialization
+{
+    Frame *
+    createPeerJoinNotification(std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
+}
 
 #endif
 
