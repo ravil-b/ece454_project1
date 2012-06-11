@@ -81,6 +81,7 @@ public:
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
 		 ERROR_STATE, WAITING_FOR_HANDSHAKE, ONLINE, OFFLINE } state_;
 
+    void stopDownloadLoop();
 
     // Feel free to hack around with the private data, since this is part of your design
     // This is intended to provide some exemplars to help; ignore it if you don't like it.
@@ -107,6 +108,9 @@ private:
 
     boost::thread *incomingConnectionsThread_;
 
+    // Chunks of files currently being requested for
+    std::map<char, char> numChunksRequested_;
+
     void acceptConnections();
     void handleRequest(Request request);
     void handleFileListFrame(Frame * fileListFrame);
@@ -114,7 +118,11 @@ private:
     void loadLocalFilesFromDisk();
     void loadLocalFileFromDisk(boost::filesystem::path p);
     char getMaxFileNum();
-
+    
+    // The download loop where we monitor the local 
+    // files and request chunks from other peers
+    void downloadLoop();
+    bool runDownloadLoop_;
 
     // Mutex to protect connect/disconnect
     boost::mutex connectionMutex_;

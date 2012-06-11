@@ -133,6 +133,7 @@ namespace fileListRequestFrame_serialization
 
 namespace chunkRequestFrame_serialization
 {
+    Frame *createChunkRequestFrame(char fileNum, int chunkNum);
     char getFileNum(Frame * frame);
     int getChunkNum(Frame * frame);
 };

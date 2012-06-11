@@ -1,6 +1,6 @@
 
 #define BOOST_THREAD_USE_LIB
-
+#define MAX_FILE_CHUNKS_REQEST 1
 
 
 
@@ -254,6 +254,9 @@ Peer::initLocalPeer(){
         }
     }
 
+    runDownloadLoop_ = true;
+    boost::thread(boost::bind(&Peer::runDownloadLoop_, this));
+
     return errOK;
 }
 
@@ -457,7 +460,7 @@ Peer::handleRequest(Request request)
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
             fileInfoList_.files.push_back(newFile);
-
+	    numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
             TRACE("peer.cpp", "Added new file")
         }
         break;
@@ -829,8 +832,6 @@ int Peer::join()
         }
     }
 
-
-
     return errOK;
 }
 
@@ -911,4 +912,43 @@ Peer::disconnect(){
 void 
 Peer::stopConnection(){
     sendq_->stopReading();
+}
+
+void
+Peer::stopDownloadLoop(){
+    runDownloadLoop_ = false;
+}
+
+void 
+Peer::downloadLoop(){
+    cout << "downloadLoop()" << endl;
+    while (runDownloadLoop_){
+	std::map<char, char>::iterator numChunksIter = numChunksRequested_.begin();
+	for ( ; numChunksIter != numChunksRequested_.end(); numChunksIter++){
+	    if (numChunksIter->second < MAX_FILE_CHUNKS_REQEST){
+		cout << "DONWLOAD LOOP can send a frame now" << endl;
+		// request another chunk for this file
+		std::vector<FileInfo *>::iterator fileListIter = 
+		    fileInfoList_.files.begin();
+		// get the chunk info for the curr file
+		FileInfo *fileInfo = fileInfoList_.getFileFromFileNumber(numChunksIter->first);
+		// iterate chunks downloaded
+		std::map<int, bool>::iterator chunksInter = fileInfo->chunksDownloaded.begin();
+		bool chunkFound = false;
+		for ( ; chunksInter != fileInfo->chunksDownloaded.end(); chunksInter++){
+		    if (chunksInter->second == false){
+			cout << "Found chunk to download" << endl;
+			chunkFound = true;
+			break;
+		    }
+		}
+		if (chunkFound){
+		    Frame *newFrame = chunkRequestFrame_serialization::
+			createChunkRequestFrame(numChunksIter->first, chunksInter->first);
+		    (*peers_)[1]->sendFrame(newFrame);
+		    numChunksIter->second++;
+		}
+	    }
+	}
+    }
 }

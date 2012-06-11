@@ -336,6 +336,13 @@ namespace chunk_serialization_helpers
 
 namespace chunkRequestFrame_serialization
 {
+    Frame *
+    createChunkRequestFrame(char fileNum, int chunkNum){
+	Frame *newFrame = new Frame();
+	newFrame->serializedData[1] = fileNum;
+	serialization_helpers::copyIntToCharArray(newFrame->serializedData + 2, chunkNum);
+	return newFrame;
+    }
     char getFileNum(Frame * frame)
     {
         return chunk_serialization_helpers::getFileNum(frame->serializedData);
