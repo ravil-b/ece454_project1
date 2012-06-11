@@ -310,7 +310,7 @@ namespace chunk_serialization_helpers
 
     void setChunkNum(char * serializedData, int chunkNum)
     {
-        serialization_helpers::copyIntToCharArray(serializedData, chunkNum);
+        serialization_helpers::copyIntToCharArray(serializedData + 2, chunkNum);
     }
 
     void setChunkCount(char * serializedData, int chunkNum)
@@ -411,8 +411,8 @@ namespace newChunkAvailable_serialization
     {
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::NEW_CHUNK_AVAILABLE;
-        chunk_serialization_helpers::setFileNum(newFrame->serializedData + fileNumIdx, fileNum);
-        chunk_serialization_helpers::setChunkNum(newFrame->serializedData + chunkNumIdx, chunkNum);
+        newFrame->serializedData[fileNumIdx] = fileNum;
+        serialization_helpers::copyIntToCharArray(newFrame->serializedData + chunkNumIdx, chunkNum);
 
 	portAndIp_serialization::setIp(ip, newFrame->serializedData);
 	portAndIp_serialization::setPort(port, newFrame->serializedData);

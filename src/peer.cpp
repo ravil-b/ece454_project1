@@ -340,8 +340,8 @@ Peer::handleRequest(Request request)
 	    // change the status of the peer to connected.
 	    Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
 	    if (p != NULL){
-		TRACE("peer.cpp", "Received handshake. ONLINE");
-		p->state_ = ONLINE;
+            TRACE("peer.cpp", "Received handshake. ONLINE");
+            p->state_ = ONLINE;
 	    }
 	    else{
 		TRACE("peer.cpp", "Received handshake, but unknown peer");
@@ -704,8 +704,17 @@ int Peer::insert(string fileName)
 int
 Peer::getChunkCount(char fileNum)
 {
-    // TODO: fill this in if necessary
-    return 0;
+    FileInfo * file = fileInfoList_.getFileFromFileNumber(fileNum);
+    int totalChunks = 0;
+
+    std::map<int, bool>::iterator chunkIter;
+    // loop for each chunk
+    for (chunkIter = file->chunksDownloaded.begin(); chunkIter != file->chunksDownloaded.end(); ++chunkIter)
+    {
+        totalChunks += (int)chunkIter->second;
+    }
+
+    return totalChunks;
 }
 
 bool
