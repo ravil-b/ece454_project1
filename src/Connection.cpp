@@ -220,7 +220,8 @@ Server::Server(Connection *connection, boost::asio::io_service *ioService, short
     : connection_(connection),
       acceptor_(*ioService, tcp::endpoint(tcp::v4(), port)),
       ioService_(ioService),
-      receiveQ_(receiveQ){
+      receiveQ_(receiveQ),
+      stopServer_(false){
     
     unsigned int sessionId = connection_->generateSessionId();
     boost::shared_ptr<Session> newSession = Session::create(sessionId, connection_,
@@ -230,10 +231,17 @@ Server::Server(Connection *connection, boost::asio::io_service *ioService, short
 				       boost::asio::placeholders::error));
 }
 
+void 
+Server::stopServer(){
+    stopServer_ = true;
+    acceptor_.cancel();
+    acceptor_.close();
+}
+
 void
 Server::handleAccept(boost::shared_ptr<Session> newSession, const boost::system::error_code& error){
     TRACE("Connection.cpp", "Accepting a connection");
-    if (!error){
+    if (!error && !stopServer_){
 	newSession->setSendQ(connection_->addSession(newSession->sessionId(),
 						     newSession.get()));
 	newSession->start();
@@ -242,6 +250,9 @@ Server::handleAccept(boost::shared_ptr<Session> newSession, const boost::system:
 	acceptor_.async_accept(*(newSession->socket()),
 			       boost::bind(&Server::handleAccept, this, newSession,
 					   boost::asio::placeholders::error));
+    }
+    else if(!error){
+	TRACE("Connection.cpp", "Server is stopping to accept connections");
     }
     else{
 	std::cerr << "Failed to accept a connection" << std::endl;
@@ -278,6 +289,14 @@ Connection::startServer(const std::string &port, ThreadSafeQueue<Request> *recei
     // so, run it in a thread, so that we can return from here
     serverThread_ = new boost::thread(boost::bind(&boost::asio::io_service::run, ioService_));
     return CONNECTION_OK;
+}
+
+void
+Connection::stopServer(){
+    // make the server to stop accpeting incoming connections
+    server_->stopServer();
+    delete server_;
+    server_ = NULL;
 }
 
 int

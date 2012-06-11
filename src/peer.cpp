@@ -218,10 +218,10 @@ int
 Peer::initPeer()
 {
     if (peerNumber_ == 0){
-       initLocalPeer();
-   }else{
-       initRemotePeer();
-   }
+	initLocalPeer();
+    }else{
+	initRemotePeer();
+    }
     return errOK;
 }
 
@@ -297,10 +297,11 @@ Peer::acceptConnections(){
     Request request;
     while(receiveq_->pop(&request)){
         handleRequest(request);
+	delete request.frame;
     }
     TRACE("peer.cpp", "Stopping to accept connections.");
-    // TODO stop the server
-    delete request.frame;
+    peers_->connection_->stopServer();
+    //delete request.frame;
     //delete receiveq_;
 }
 
@@ -332,24 +333,23 @@ Peer::handleRequest(Request request)
         case FrameType::HANDSHAKE_RESPONSE:
         {
             TRACE("peer.cpp" ,"Handshake Response Received");
-            std::cout << frame_function::getIp(request.frame->serializedData) << std::endl;
-            std::cout << frame_function::getPort(request.frame->serializedData) << std::endl;
-            std::string frameIp = frame_function::getIp(request.frame->serializedData);
-            std::string framePort = frame_function::getPort(request.frame->serializedData);
-
+            std::string frameIp = portAndIp_serialization::getIp(request.frame->serializedData);
+            std::string framePort = portAndIp_serialization::getPort(request.frame->serializedData);
 	    // change the status of the peer to connected.
-            for(int i = 1; i < maxPeers; i++){
+	    int i;
+            for(i = 1; i < maxPeers; i++){
 
-                if      ((strcmp((*peers_)[i]->getIpAddress().c_str(), frameIp.c_str()) == 0) &&
-                         (strcmp((*peers_)[i]->getPort().c_str(), framePort.c_str())))
-                {
-                    TRACE("peer.cpp", "Received handshake. ONLINE");
+                if((strcmp((*peers_)[i]->getIpAddress().c_str(), frameIp.c_str()) == 0) &&
+		   (strcmp((*peers_)[i]->getPort().c_str(), framePort.c_str()) == 0))
+		{
+		    TRACE("peer.cpp", "Received handshake. ONLINE");
                     (*peers_)[i]->state_ = ONLINE;
-                    // Close the connection with that remote peer.
-                    // disconnect();
                     break;
                 }
             }
+	    if (i == maxPeers){
+		TRACE("peer.cpp", "Received handshake, but unknown peer");
+	    }
         }
         break;
 
@@ -479,7 +479,6 @@ Peer::handleRequest(Request request)
             string port = chunkInfo_serialization::getPort(frame);
             std::map<char, std::map<int, bool> > fileChunkMap = chunkInfo_serialization::getChunkMap(frame);
 
-
             Peer * fromPeer = peers_->getPeerFromIpAndPort(ip, port);
 
             std::map<char, std::map<int, bool> >::iterator fileIter;
@@ -548,6 +547,13 @@ Peer::handleRequest(Request request)
             q->push(chunkInfoRequest);
 
         }break;
+
+
+        case FrameType::PEER_LEAVE_NOTIFICATION:
+	{
+	    // set peer's status to OFFLINE
+	}
+	break;
 
         default:
             break;
@@ -765,7 +771,7 @@ int Peer::leave()
     }
 
     // Start shutting down own connections
-    //receiveq_->stopReading();
+    receiveq_->stopReading();
 
     // check if this peer has chunks that no one else has
     // if so, push those out
@@ -778,10 +784,19 @@ int Peer::leave()
 
 int Peer::join()
 {
+    if (receiveq_ != NULL){
+	// TODO delete every frame
+	delete receiveq_;
+	receiveq_ = NULL;
+    }
+    
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
 
-    initPeer();
+    // init every peer
+    for (int i = 0; i < maxPeers; i++){
+	(*peers_)[i]->initPeer();
+    }
 
     // for each file in each peer, set a value to say that we don't have chunk info for the file
     for (int i = 0; i < peers_->getPeerCount(); i++)
@@ -851,8 +866,8 @@ Peer::connect(){
     int connCode = peers_->connection_->connect(ipAddress_, port_, 
 						&sessionId_, sendq_);
     if (connCode != CONNECTION_OK){
-	TRACE("peer.cpp", "Cannot connect to remote peer. DISCONNECTED");
-	state_ = DISCONNECTED;
+	TRACE("peer.cpp", "Cannot connect to remote peer. OFFLINE");
+	state_ = OFFLINE;
 	delete sendq_;
 	sendq_ = NULL;
 	return errCannotConnectToPeer;

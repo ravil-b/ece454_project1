@@ -91,11 +91,13 @@ class Server {
 	   short port, ThreadSafeQueue<Request> *receiveQ);
     void handleAccept(boost::shared_ptr<Session> newSession, 
 		      const boost::system::error_code& error);
+    void stopServer();
  private:
     Connection *connection_;
     boost::asio::ip::tcp::acceptor acceptor_;
     boost::asio::io_service *ioService_;
     ThreadSafeQueue<Request> *receiveQ_;
+    bool stopServer_;
 };
 
 class Connection {
@@ -109,7 +111,7 @@ class Connection {
     void endSession(unsigned int sessionId);
     bool isConnected(unsigned int sessionId);
     int startServer(const std::string &port, ThreadSafeQueue<Request> *receiveQ);
-    
+    void stopServer();
     ThreadSafeQueue<Frame *> *getReplyQueue(unsigned int requestId);
     unsigned int generateSessionId();
     ThreadSafeQueue<Frame *> *addSession(unsigned int sessionId, 

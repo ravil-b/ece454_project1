@@ -130,7 +130,7 @@ ChunkInfoFrame::ChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool
     for (char fileIdx=0; fileIdx < fileCount; fileIdx++)
     {
 
-        for (int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
+        for (unsigned int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
         {
             unsigned char b = 0;
             b |= (chunkMap[fileIdx][chunkNum] & 1) << 8;
@@ -159,7 +159,6 @@ ChunkInfoFrame::getFileCount()
 std::map<char, std::map<int, bool> >
 ChunkInfoFrame::getChunkMap()
 {
-
 }
 
 
@@ -169,23 +168,25 @@ ChunkInfoRequestFrame::ChunkInfoRequestFrame()
 
 }
 
-namespace frame_function{
+namespace portAndIp_serialization{
     void setIp(std::string ip, char *serializedData){
         strcpy(serializedData + sizeof(char), ip.c_str());
     }
-    //copyShortToCharArray(serializedData + 16, (short)atoi(port.c_str()));
+
     std::string getIp(char *serializedData)
     {
         return std::string(serializedData + 1, 15);
     }
 
-    std::string getPort(char *serializedData)
+    void setPort(std::string port, char *serializedData)
     {
-        char portStr[10];
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(serializedData + 16));
-        return std::string(portStr, 5);
+	strcpy(serializedData + sizeof(char) * 16, port.c_str());
     }
 
+    std::string getPort(char *serializedData)
+    {
+	return std::string(serializedData + sizeof(char) * 16, 5);
+    }
 }
 
 namespace serialization_helpers{
@@ -268,7 +269,7 @@ namespace fileListFrame_serialization{
         }
 
 	std::vector<FileInfo> fileInfos = getFileInfos(frame);
-	for (int i = 0; i < fileInfos.size(); i++)
+	for (unsigned int i = 0; i < fileInfos.size(); i++)
 	{
 	    FileInfo f = fileInfos[i];
 	}
@@ -308,33 +309,28 @@ namespace handshakeResponseFrame_serialization
     {
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
-        strcpy(newFrame->serializedData + sizeof(char), ip.c_str());
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + 16, (short)atoi(port.c_str()));
+	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;
     }
 
     std::string
     getIp(Frame * frame)
     {
-        return std::string(frame->serializedData + 1, 15);
+        return portAndIp_serialization::getIp(frame->serializedData);
     }
 
 
     std::string
     getPort(Frame * frame)
     {
-        char portStr[10];
-
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + 16));
-        return std::string(portStr, 5);
+        return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
 namespace chunkInfo_serialization
 {
 
-    const unsigned int ipIdx = sizeof(char);
-    const unsigned int portIdx = sizeof(char) + 15; // ip is 15 chars long
     const unsigned int fileCountIdx = sizeof(char) + 15 + sizeof(short);
     const unsigned int chunkInfoStartIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
 
@@ -345,8 +341,8 @@ namespace chunkInfo_serialization
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO;
 
-        strcpy(newFrame->serializedData + ipIdx, ip.c_str());
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + portIdx, (short)atoi(port.c_str()));
+	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+        portAndIp_serialization::setPort(port, newFrame->serializedData);
 
         newFrame->serializedData[fileCountIdx] = fileCount;
 
@@ -409,42 +405,35 @@ namespace chunkInfo_serialization
 
     std::string getIp(Frame * frame)
     {
-        return std::string(frame->serializedData + ipIdx, 15);
+        return portAndIp_serialization::getIp(frame->serializedData);
     }
 
     std::string getPort(Frame * frame)
     {
-        char portStr[10];
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + portIdx));
-        return std::string(portStr, 5);
+        return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
 namespace chunkInfoRequest_serialization
 {
-    const unsigned int ipIdx = sizeof(char);
-    const unsigned int portIdx = sizeof(char) + 15; // ip is 15 chars long
-
     Frame *
     createChunkInfoRequest(std::string ip, std::string port)
     {
         Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::CHUNK_INFO_REQUEST;
-        strcpy(newFrame->serializedData + ipIdx, ip.c_str());
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + portIdx, (short)atoi(port.c_str()));
+	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;
     }
 
     std::string getIp(Frame * frame)
     {
-        return std::string(frame->serializedData + ipIdx, 15);
+        return portAndIp_serialization::getIp(frame->serializedData);
     }
 
     std::string getPort(Frame * frame)
     {
-        char portStr[10];
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + portIdx));
-        return std::string(portStr, 5);
+        return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
@@ -563,8 +552,6 @@ namespace chunkRequestDecline_serialization
 
 namespace newChunkAvailable_serialization
 {
-    const unsigned int ipIdx = sizeof(char);
-    const unsigned int portIdx = sizeof(char) + 15; // ip is 15 chars long
     const unsigned int fileNumIdx = sizeof(char) + 15 + sizeof(short);
     const unsigned int chunkNumIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
 
@@ -576,12 +563,8 @@ namespace newChunkAvailable_serialization
         chunk_serialization_helpers::setFileNum(newFrame->serializedData + fileNumIdx, fileNum);
         chunk_serialization_helpers::setChunkNum(newFrame->serializedData + chunkNumIdx, chunkNum);
 
-
-        strcpy(newFrame->serializedData + ipIdx, ip.c_str());
-
-
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + portIdx, (short)atoi(port.c_str()));
-
+	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;
     }
     char getFileNum(Frame * frame)
@@ -595,20 +578,16 @@ namespace newChunkAvailable_serialization
 
     std::string getIp(Frame * frame)
     {
-        return std::string(frame->serializedData + ipIdx, 15);
+        return portAndIp_serialization::getIp(frame->serializedData);
     }
     std::string getPort(Frame * frame)
     {
-        char portStr[10];
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + portIdx));
-        return std::string(portStr, 5);
+        return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
 namespace newFileAvailable_serialization
 {
-    const unsigned int ipIdx = sizeof(char);
-    const unsigned int portIdx = sizeof(char) + 15; // ip is 15 chars long
     const unsigned int fileNumIdx = sizeof(char) + 15 + sizeof(short);
     const unsigned int chunkCountIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char);
     const unsigned int fileNameIdx = sizeof(char) + 15 + sizeof(short) + sizeof(char) + sizeof(int);
@@ -622,7 +601,8 @@ namespace newFileAvailable_serialization
         chunk_serialization_helpers::setChunkCount(newFrame->serializedData + chunkCountIdx, file->chunkCount);
 
 
-        strcpy(newFrame->serializedData + ipIdx, ip.c_str());
+        portAndIp_serialization::setIp(ip, newFrame->serializedData);
+	portAndIp_serialization::setPort(port, newFrame->serializedData);
 
 
         const char *fName = file->fileName.c_str();
@@ -632,8 +612,6 @@ namespace newFileAvailable_serialization
                 break;
             }
         }
-
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + portIdx, (short)atoi(port.c_str()));
     }
     FileInfo getFileInfo(Frame * frame)
     {
@@ -642,14 +620,12 @@ namespace newFileAvailable_serialization
 
     std::string getIp(Frame * frame)
     {
-        return std::string(frame->serializedData + ipIdx, 15);
+        return portAndIp_serialization::getIp(frame->serializedData);
     }
 
     std::string getPort(Frame * frame)
     {
-        char portStr[10];
-        sprintf(portStr, "%d", serialization_helpers::parseShortFromCharArray(frame->serializedData + portIdx));
-        return std::string(portStr, 5);
+	return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
 
@@ -659,11 +635,9 @@ namespace peerLeavingFrame_serialization{
     Frame *
     createPeerLeavingFrame(std::string ip, std::string port){
 	Frame * newFrame = new Frame();
-        newFrame->serializedData[0] = (char)FrameType::HANDSHAKE_RESPONSE;
-        strcpy(newFrame->serializedData + sizeof(char), ip.c_str());
-
-
-        serialization_helpers::copyShortToCharArray(newFrame->serializedData + 16, (short)atoi(port.c_str()));
+        newFrame->serializedData[0] = (char)FrameType::PEER_LEAVE_NOTIFICATION;
+	portAndIp_serialization::setIp(ip, newFrame->serializedData);
+	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;;
     }
 }

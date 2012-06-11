@@ -102,7 +102,7 @@ namespace handshakeResponseFrame_serialization
 };
 
 
-namespace frame_function{
+namespace portAndIp_serialization{
     // IP and Port
     std::string getIp(char *serializedData);
     std::string getPort(char *serializedData);
