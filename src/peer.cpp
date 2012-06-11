@@ -359,6 +359,7 @@ Peer::handleRequest(Request request)
         {
             // write the chunk to file
 
+            TRACE("peer.cpp", "Got CHUNK frame.");
             char fileNum = chunkDataFrame_serialization::getFileNum(frame);
             int chunkNum = chunkDataFrame_serialization::getChunkNum(frame);
             char * chunk = chunkDataFrame_serialization::getChunk(frame);
@@ -374,8 +375,8 @@ Peer::handleRequest(Request request)
 
         case FrameType::CHUNK_REQUEST:
         {
-            // if we have the chunk
-                // respond with chunk
+
+            TRACE("peer.cpp", "Got CHUNK_REQUEST frame.");
 
             char fileNum = chunkRequestFrame_serialization::getFileNum(frame);
             int chunkNum = chunkRequestFrame_serialization::getChunkNum(frame);
@@ -408,6 +409,7 @@ Peer::handleRequest(Request request)
             // update peer's chunk list to reflect that it DOES NOT have this chunk
             // ask another peer for the chunk
         {
+            TRACE("peer.cpp", "Got CHUNK_REQUEST_DECLINE frame.");
             char fileNum = chunkRequestDecline_serialization::getFileNum(frame);
             int chunkNum = chunkRequestDecline_serialization::getChunkNum(frame);
 
@@ -417,13 +419,14 @@ Peer::handleRequest(Request request)
         case FrameType::FILE_LIST:
             // update local file list
         {
-            cout << "File list response received" << endl;
+            TRACE("peer.cpp", "Got FILE_LIST frame.");
             handleFileListFrame(frame);
         }
             break;
 
         case FrameType::FILE_LIST_REQUEST:
         {
+            TRACE("peer.cpp", "Got FILE_LIST_REQUEST frame.")
             // check if file list is updated
             // if so, respond with file list
                 //else : send file_list_decline
@@ -469,13 +472,17 @@ Peer::handleRequest(Request request)
         case FrameType::NEW_FILE_AVAILABLE:
         {
             // update local file list
-            FileInfo * newFile = new FileInfo( newFileAvailable_serialization::getFileInfo(frame));
+            TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
+            FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
             fileInfoList_.files.push_back(newFile);
+
+            TRACE("peer.cpp", "Added new file")
         }
         break;
 
         case FrameType::CHUNK_INFO:
         {
+            TRACE("peer.cpp", "Got CHUNK_INFO frame.")
             char fileCount = chunkInfo_serialization::getFileCount(frame);
             string ip = chunkInfo_serialization::getIp(frame);
             string port = chunkInfo_serialization::getPort(frame);
@@ -507,6 +514,7 @@ Peer::handleRequest(Request request)
 
         case FrameType::CHUNK_INFO_REQUEST:
         {
+            TRACE("peer.cpp", "Got CHUNK_INFO_REQUEST frame.")
             string ip = chunkInfoRequest_serialization::getIp(frame);
             string port = chunkInfoRequest_serialization::getPort(frame);
 
@@ -553,6 +561,7 @@ Peer::handleRequest(Request request)
 
         case FrameType::PEER_LEAVE_NOTIFICATION:
 	{
+	    TRACE("peer.cpp", "Got PEER_LEAVE_NOTIFICATION frame.")
 	    // set peer's status to OFFLINE
 	}
 	break;
