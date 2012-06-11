@@ -88,7 +88,18 @@ namespace serialization_helpers{
     copyShortToCharArray(char * array, short toCopy);
 }
 
+namespace handshakeRequestFrame_serialization
+{
+    Frame * createHandshakeRequestFrame();
+};
 
+namespace handshakeResponseFrame_serialization
+{
+    Frame * createHandshakeResponseFrame(std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
+
+};
 
 
 namespace frame_function{
@@ -111,38 +122,76 @@ namespace fileListFrame_serialization{
     char getFileCount();
 };
 
-namespace chunkInfo_serialization
-{
-    Frame * createChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
-    char getFileCount();
-    std::map<char, std::map<int, bool> > getChunkMap();
-};
 
-namespace chunkInfoRequest_serialization
-{
-    Frame *
-    createChunkInfoRequest();
-};
 
 namespace fileListRequestFrame_serialization
 {
     Frame *
     createFileListRequest();
+
 };
 
 
-
-namespace handshakeRequestFrame_serialization
+namespace chunkRequestFrame_serialization
 {
-    Frame * createHandshakeRequestFrame();
+    char getFileNum(Frame * frame);
+    int getChunkNum(Frame * frame);
 };
 
-namespace handshakeResponseFrame_serialization
+namespace chunkDataFrame_serialization
 {
-    Frame * createHandshakeResponseFrame(std::string ip, std::string port);
+    Frame *
+    createChunkDataFrame(char fileNum, int chunkNum, char * chunk);
+    char getFileNum(Frame * frame);
+    int getChunkNum(Frame * frame);
+    char * getChunk(Frame * frame);
+
+};
+
+namespace chunkRequestDecline_serialization
+{
+    Frame *
+    createChunkRequestDeclineFrame(char fileNum, int chunkNum);
+    char getFileNum(Frame * frame);
+    int getChunkNum(Frame * frame);
+
+};
+
+namespace newChunkAvailable_serialization
+{
+    Frame *
+    createNewChunkAvailableFrame(char fileNum, int chunkNum, std::string ip, std::string port);
+    char getFileNum(Frame * frame);
+    int getChunkNum(Frame * frame);
     std::string getIp(Frame * frame);
     std::string getPort(Frame * frame);
+};
 
+namespace newFileAvailable_serialization
+{
+    Frame *
+    createNewFileAvailableFrame(FileInfo * file, std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
+    FileInfo getFileInfo(Frame * frame);
+
+};
+
+namespace chunkInfo_serialization
+{
+    Frame * createChunkInfoFrame(char fileCount, std::string ip, std::string port, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
+    char getFileCount(Frame * frame);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
+    std::map<char, std::map<int, bool> > getChunkMap(Frame * frame);
+};
+
+namespace chunkInfoRequest_serialization
+{
+    Frame *
+    createChunkInfoRequest(std::string ip, std::string port);
+    std::string getIp(Frame * frame);
+    std::string getPort(Frame * frame);
 };
 
 
@@ -173,7 +222,6 @@ struct ChunkDataFrame : ChunkFrame
 {
     ChunkDataFrame(char fileNum, int chunkNum, char* chunk);
     char * getChunk();
-    void setChunk(char * chunk);
 };
 
 struct ChunkRequestFrame : ChunkFrame{
