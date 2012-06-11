@@ -395,7 +395,7 @@ Peer::handleRequest(Request request)
                     p.string(),
                     chunkNum,
                     chunk,
-                    65536); /// TODO Fill in the file size
+                    localFile->fileSize);
 	    
 	    // get a map of chunks downloaded for this file
 	    map<int, bool> *chunksDownloaded = 
@@ -510,7 +510,8 @@ Peer::handleRequest(Request request)
             // update local file list
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
-	    newFile->fileSize = newFile->chunkCount * chunkSize;
+	    //newFile->fileSize = newFile->chunkCount * chunkSize;
+	    cout << "File Size: " << newFile->fileSize << endl;
 	    cout << "Chunks total: " << newFile->chunkCount << endl;
             fileInfoList_.files.push_back(newFile);
             numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
@@ -729,6 +730,8 @@ Peer::loadLocalFileFromDisk(boost::filesystem::path path)
         {
             f->chunkCount++;
         }
+	f->fileSize = fileSize;
+	cout << "File size is " << fileSize << endl;
         f->fileNum = getMaxFileNum() + 1;
 
         for (int i = 0; i < f->chunkCount; i++)
@@ -1021,6 +1024,7 @@ Peer::disconnect(){
 void 
 Peer::stopConnection(){
     sendq_->stopReading();
+    state_ = DISCONNECTED;
 }
 
 void
@@ -1031,7 +1035,7 @@ Peer::stopDownloadLoop(){
 void 
 Peer::downloadLoop(){
     cout << "downloadLoop()" << endl;
-    while (runDownloadLoop_){
+    while (runDownloadLoop_){	
 	std::map<char, char>::iterator numChunksIter = numChunksRequested_.begin();
 	for ( ; numChunksIter != numChunksRequested_.end(); numChunksIter++){
 	    if (numChunksIter->second < MAX_FILE_CHUNKS_REQEST){
