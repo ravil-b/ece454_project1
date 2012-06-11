@@ -61,10 +61,14 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData, in
     try
     {
 	createFileIfNotExists(fileName, fileSize);
-        file_sink localFile(fileName, std::ios_base::out);
-        boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
+	fstream out(fileName.c_str(), ios::binary | ios::out | ios::in);
+	out.seekp(chunkNum * chunkSize, ios::beg);
+	out.write(chunkData, chunkSize);
+	// For some reason, the following overrides the file:
+        //file_sink localFile(fileName, std::ios_base::out);
+        //boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
         //streamsize result = 
-	boost::iostreams::write(localFile, &chunkData[0], chunkSize);
+	//boost::iostreams::write(localFile, &chunkData[0], chunkSize);
     }
     catch (std::exception& e)
     {
