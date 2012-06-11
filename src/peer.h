@@ -87,12 +87,12 @@ private:
     string ipAddress_;
     string port_;
 
-    FileInfoList fileList_;
+    FileInfoList fileInfoList_;
     map<char, bool> haveChunkInfo_;
     //map<char, map<int, bool> > fileChunkMap_; // {fileNum: {chunkNum: hasChunk}}
 
     Peers *peers_;
-    FileChunkIO * chunkIO_;
+    FileChunkIO * fileChunkIO_;
 
 
 
@@ -114,6 +114,7 @@ private:
     void loadLocalFilesFromDisk();
     void loadLocalFileFromDisk(boost::filesystem::path p);
     char getMaxFileNum();
+
 
     // Mutex to protect connect/disconnect
     boost::mutex connectionMutex_;
@@ -147,6 +148,7 @@ class Peers : public CliCmdHandler {
     Peer ** getPeers();
     int getPeerCount();
     void broadcastFrame(Frame * frame, Peer * fromPeer);
+    Peer * getPeerFromIpAndPort(string ip, string port);
 
     Connection *connection_;
  private:
