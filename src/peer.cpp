@@ -310,6 +310,8 @@ void
 Peer::handleRequest(Request request)
 {
 
+    TRACE("peer.cpp", "New Request Received!");
+
     Frame * frame = request.frame;
     switch (frame->getFrameType())
     {
@@ -646,15 +648,10 @@ Peer::loadLocalFileFromDisk(boost::filesystem::path path)
     }
 }
 
-void
-Peer::pushNewFile(std::string fileName)
-{
-
-}
-
 // Insert a file into the system
 int Peer::insert(string fileName)
 {
+    TRACE("peer.cpp", "Inserting new file.");
     filesystem::path pathToNewFile(fileName);
     if (!filesystem::exists(pathToNewFile)){
         cout << fileName << " does not exist!" << endl;
@@ -662,10 +659,14 @@ int Peer::insert(string fileName)
     }
     try
     {
+        TRACE("peer.cpp", "Found file, attempting to copy.");
+
         filesystem::path pathToLocalStore(LOCAL_STORAGE_PATH_NAME);
         pathToLocalStore /= pathToNewFile.filename().string();
 
         filesystem::copy_file(pathToNewFile, pathToLocalStore, filesystem::copy_option::overwrite_if_exists);
+
+        loadLocalFileFromDisk(pathToLocalStore);// adds the file to our file list
 
     }
     catch (std::exception& e)
@@ -673,6 +674,22 @@ int Peer::insert(string fileName)
         std::cerr << "Problem copying to localStorage: " << e.what() << "\n";
         return errCannotCopyInsertFile;
     }
+
+    TRACE("peer.cpp", "File copied successfully.");
+
+    FileInfo * newFile = fileInfoList_.getFileFromFileName(fileName);
+
+    string foundFileInList = newFile != 0 ? "found new file" : "couldn't find new file by filename!";
+
+    TRACE("peer.cpp", foundFileInList);
+
+    Frame * newFileFrame = newFileAvailable_serialization::createNewFileAvailableFrame(newFile, getIpAddress(), getPort());
+
+    TRACE("peer.cpp", "Created NEW_FILE_AVAILABLE frame.");
+
+    peers_->broadcastFrame(newFileFrame, this);
+
+    TRACE("peer.cpp", "Broadcasted NEW_FILE_AVAILABLE frame.");
 
     return errOK;
 }

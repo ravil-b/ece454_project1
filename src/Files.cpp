@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <map>
+#include <iostream>
 
 
 void initChunksDownloaded(FileInfo * f)
@@ -46,7 +47,8 @@ FileInfoList::getFileFromFileName(std::string fileName)
     for (unsigned int fileIdx; fileIdx < files.size(); fileIdx++)
     {
         FileInfo * f = files[fileIdx];
-        if (strcmp(f->fileName.c_str(), fileName.c_str()))
+
+        if (f->fileName == fileName)
             return f;
     }
     return 0;
