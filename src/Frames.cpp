@@ -20,8 +20,6 @@ Frame::getFrameType()
 }
 
 
-
-
 FileNumFrame::FileNumFrame(char fileNum)
 {
     serializedData[1] = fileNum;
@@ -160,6 +158,7 @@ ChunkInfoRequestFrame::ChunkInfoRequestFrame()
 {
 
 }
+
 
 namespace portAndIp_serialization{
     void setIp(std::string ip, char *serializedData){
