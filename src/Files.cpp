@@ -8,9 +8,9 @@
 
 void initChunksDownloaded(FileInfo * f)
 {
-    for (int i; i < chunkSize; i++)
+    for (int i = 0; i < chunkSize; i++)
     {
-        f->chunksDownloaded[i] = false;
+        f->chunksDownloaded.insert(std::make_pair(i, false));
     }
 }
 
