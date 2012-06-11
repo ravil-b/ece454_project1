@@ -55,7 +55,7 @@ struct FrameType
         CHUNK_INFO =            12,
         CHUNK_INFO_REQUEST =    13,
 
-	PEER_LEAVE_NOTIFICATION = 14
+        PEER_LEAVE_NOTIFICATION = 14
     };
 };
 
@@ -63,7 +63,6 @@ struct Frame
 {
     char serializedData[FRAME_LENGTH];
     char getFrameType();
-    void setFrameType(FrameType frameType);
 
 };
 
@@ -192,81 +191,6 @@ namespace chunkInfoRequest_serialization
     createChunkInfoRequest(std::string ip, std::string port);
     std::string getIp(Frame * frame);
     std::string getPort(Frame * frame);
-};
-
-
-//struct HandshakeRequestFrame : Frame
-//{
-//    HandshakeRequestFrame();
-//};
-
-//struct HandshakeResponseFrame : PeerInfoFrame
-//{
-//    HandshakeResponseFrame(std::string ip, std::string port);
-//};
-
-struct FileNumFrame: Frame
-{
-    FileNumFrame(char fileNum);
-    char getFileNum();
-};
-
-
-struct ChunkFrame : FileNumFrame
-{
-    ChunkFrame(char fileNum, int chunkNum);
-    int getChunkNum();
-};
-
-struct ChunkDataFrame : ChunkFrame
-{
-    ChunkDataFrame(char fileNum, int chunkNum, char* chunk);
-    char * getChunk();
-};
-
-struct ChunkRequestFrame : ChunkFrame{
-    ChunkRequestFrame(char fileNum, int chunkNum);
-};
-struct ChunkRequestDeclineFrame : ChunkFrame{
-    ChunkRequestDeclineFrame(char fileNum, int chunkNum);
-};
-
-
-struct FileListFrame: Frame
-{
-    FileListFrame(char fileCount, std::vector<FileInfo> fileInfos);
-    char getFileCount();
-
-    std::vector<FileInfo> getFileInfos();
-
-private:
-    void parseFileInfos();
-    std::vector<FileInfo> * fileInfos_;
-};
-struct FileListRequestFrame: Frame{
-    FileListRequestFrame();
-};
-struct FileListDeclineFrame: Frame{
-    FileListDeclineFrame();
-};
-
-
-struct NewFileAvailableFrame: Frame
-{
-    FileInfo getFileInfo();
-};
-struct NewChunkAvailableFrame: ChunkFrame{};
-
-
-struct ChunkInfoFrame: Frame
-{
-    ChunkInfoFrame(char fileCount, std::map<char, std::map<int, bool> > chunkMap); // { filenumber: { chunkNumber: chunkAvailable } }
-    char getFileCount();
-    std::map<char, std::map<int, bool> > getChunkMap();
-};
-
-struct ChunkInfoRequestFrame: Frame {
-    ChunkInfoRequestFrame();
 };
 
 #endif
