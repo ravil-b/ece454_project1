@@ -30,7 +30,7 @@ FileInfo::FileInfo(const FileInfo& f)
 FileInfo *
 FileInfoList::getFileFromFileNumber(char fileNum)
 {
-    for (int fileIdx; fileIdx < files.size(); fileIdx++)
+    for (unsigned int fileIdx; fileIdx < files.size(); fileIdx++)
     {
         FileInfo * f = files[fileIdx];
         if (f->fileNum == fileNum)
@@ -43,7 +43,7 @@ FileInfoList::getFileFromFileNumber(char fileNum)
 FileInfo *
 FileInfoList::getFileFromFileName(std::string fileName)
 {
-    for (int fileIdx; fileIdx < files.size(); fileIdx++)
+    for (unsigned int fileIdx; fileIdx < files.size(); fileIdx++)
     {
         FileInfo * f = files[fileIdx];
         if (strcmp(f->fileName.c_str(), fileName.c_str()))
@@ -55,7 +55,7 @@ FileInfoList::getFileFromFileName(std::string fileName)
 bool
 FileInfoList::contains(FileInfo * file)
 {
-    for (int fileIdx; fileIdx < files.size(); fileIdx++)
+    for (unsigned int fileIdx; fileIdx < files.size(); fileIdx++)
     {
         FileInfo * f = files[fileIdx];
         if (file->fileNum == f->fileNum)

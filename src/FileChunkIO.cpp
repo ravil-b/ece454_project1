@@ -39,7 +39,8 @@ FileChunkIO::readChunk(std::string fileName, int chunkNum, char * buffer)
     {
         file_source localFile(fileName, BOOST_IOS::binary);
         boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
-        streamsize result = boost::iostreams::read(localFile, buffer, chunkSize);
+        //streamsize result = 
+	boost::iostreams::read(localFile, buffer, chunkSize);
     }
     catch (std::exception& e)
     {
@@ -61,7 +62,8 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData)
     {
         file_sink localFile(fileName, std::ios_base::out);
         boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
-        streamsize result = boost::iostreams::write(localFile, &chunkData[0], chunkSize);
+        //streamsize result = 
+	boost::iostreams::write(localFile, &chunkData[0], chunkSize);
     }
     catch (std::exception& e)
     {

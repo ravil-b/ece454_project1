@@ -184,8 +184,8 @@ Peers::getPeerFromIpAndPort(string ip, string port)
     for (int i = 0; i < getPeerCount(); i ++)
     {
         Peer * p = peers_[i];
-        if (    strcmp(ip.c_str(), p->getIpAddress().c_str()) == 0
-            &&  strcmp(ip.c_str(), p->getPort().c_str()) == 0)
+        if ( (strcmp(ip.c_str(), p->getIpAddress().c_str()) == 0)
+	     &&  (strcmp(port.c_str(), p->getPort().c_str()) == 0) )
         {
             return p;
         }
@@ -200,10 +200,10 @@ Peers::getPeerFromIpAndPort(string ip, string port)
  */
 
 Peer::Peer(int peerNumber, string ip, string port, Peers *peers)
-    : peerNumber_(peerNumber), 
+    : state_(UNKNOWN), 
+      peerNumber_(peerNumber), 
       ipAddress_(ip),
       port_(port),
-      state_(UNKNOWN), 
       peers_(peers),
       sendq_(NULL),
       receiveq_(NULL),
@@ -336,18 +336,12 @@ Peer::handleRequest(Request request)
             std::string frameIp = portAndIp_serialization::getIp(request.frame->serializedData);
             std::string framePort = portAndIp_serialization::getPort(request.frame->serializedData);
 	    // change the status of the peer to connected.
-	    int i;
-            for(i = 1; i < maxPeers; i++){
-
-                if((strcmp((*peers_)[i]->getIpAddress().c_str(), frameIp.c_str()) == 0) &&
-		   (strcmp((*peers_)[i]->getPort().c_str(), framePort.c_str()) == 0))
-		{
-		    TRACE("peer.cpp", "Received handshake. ONLINE");
-                    (*peers_)[i]->state_ = ONLINE;
-                    break;
-                }
-            }
-	    if (i == maxPeers){
+	    Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
+	    if (p != NULL){
+		TRACE("peer.cpp", "Received handshake. ONLINE");
+		p->state_ = ONLINE;
+	    }
+	    else{
 		TRACE("peer.cpp", "Received handshake, but unknown peer");
 	    }
         }
@@ -399,16 +393,6 @@ Peer::handleRequest(Request request)
 
             Frame * chunkDataFrame = chunkDataFrame_serialization::createChunkDataFrame(fileNum, chunkNum, chunkBuff);
             q->push(chunkDataFrame);
-        }
-            break;
-
-        case FrameType::CHUNK_REQUEST_DECLINE:
-            // update peer's chunk list to reflect that it DOES NOT have this chunk
-            // ask another peer for the chunk
-        {
-            char fileNum = chunkRequestDecline_serialization::getFileNum(frame);
-            int chunkNum = chunkRequestDecline_serialization::getChunkNum(frame);
-
         }
             break;
 
@@ -474,7 +458,6 @@ Peer::handleRequest(Request request)
 
         case FrameType::CHUNK_INFO:
         {
-            char fileCount = chunkInfo_serialization::getFileCount(frame);
             string ip = chunkInfo_serialization::getIp(frame);
             string port = chunkInfo_serialization::getPort(frame);
             std::map<char, std::map<int, bool> > fileChunkMap = chunkInfo_serialization::getChunkMap(frame);
@@ -551,7 +534,20 @@ Peer::handleRequest(Request request)
 
         case FrameType::PEER_LEAVE_NOTIFICATION:
 	{
-	    // set peer's status to OFFLINE
+	    TRACE("peer.cpp" ,"Handshake Response Received");
+            std::string frameIp = portAndIp_serialization::getIp(request.frame->serializedData);
+            std::string framePort = portAndIp_serialization::getPort(request.frame->serializedData);
+	    std::cout << frameIp << std::endl;
+	    std::cout << framePort << std::endl;
+	    // change the status of the peer to offline
+	    Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
+	    if (p != NULL){
+		TRACE("peer.cpp", "Received peer leave notification. OFFLINE");
+		p->state_ = ONLINE;
+	    }
+	    else{
+		TRACE("peer.cpp", "Received peer leave notification, but unknown peer");
+	    }
 	}
 	break;
 
@@ -802,7 +798,7 @@ int Peer::join()
     for (int i = 0; i < peers_->getPeerCount(); i++)
     {
         Peer * peer = (*peers_)[i];
-        for (int fileIdx = 0; i < peer->getFileInfoList().files.size(); fileIdx++)
+        for (int fileIdx = 0; (unsigned)i < peer->getFileInfoList().files.size(); fileIdx++)
         {
             FileInfo * f = getFileInfoList().files[i];
             peer->setHaveChunkInfo(f->fileNum, false);

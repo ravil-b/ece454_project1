@@ -156,13 +156,6 @@ ChunkInfoFrame::getFileCount()
     return serializedData[1];
 }
 
-std::map<char, std::map<int, bool> >
-ChunkInfoFrame::getChunkMap()
-{
-}
-
-
-
 ChunkInfoRequestFrame::ChunkInfoRequestFrame()
 {
 
@@ -348,7 +341,7 @@ namespace chunkInfo_serialization
 
         for (char fileIdx=0; fileIdx < fileCount; fileIdx++)
         {
-            for (int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
+            for (unsigned int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
             {
                 unsigned char b = 0;
                 b |= (chunkMap[fileIdx][chunkNum] & 1) << 8;
@@ -383,7 +376,7 @@ namespace chunkInfo_serialization
         {
             std::map<int, bool> fileMap;
 
-            for (int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
+            for (unsigned int chunkNum = 0; chunkNum < maxChunksPerFile; chunkNum+=8)
             {
                 unsigned char b = frame->serializedData[chunkNum / 8];
 
@@ -612,6 +605,7 @@ namespace newFileAvailable_serialization
                 break;
             }
         }
+	return newFrame;
     }
     FileInfo getFileInfo(Frame * frame)
     {
@@ -639,5 +633,15 @@ namespace peerLeavingFrame_serialization{
 	portAndIp_serialization::setIp(ip, newFrame->serializedData);
 	portAndIp_serialization::setPort(port, newFrame->serializedData);
         return newFrame;;
+    }
+
+    std::string getIp(Frame * frame)
+    {
+        return portAndIp_serialization::getIp(frame->serializedData);
+    }
+
+    std::string getPort(Frame * frame)
+    {
+	return portAndIp_serialization::getPort(frame->serializedData);
     }
 }
