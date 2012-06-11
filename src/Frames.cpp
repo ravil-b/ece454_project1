@@ -451,7 +451,6 @@ namespace newFileAvailable_serialization
         chunk_serialization_helpers::setFileNum(newFrame->serializedData + fileNumIdx, file->fileNum);
         chunk_serialization_helpers::setChunkCount(newFrame->serializedData + chunkCountIdx, file->chunkCount);
 
-
         portAndIp_serialization::setIp(ip, newFrame->serializedData);
 	portAndIp_serialization::setPort(port, newFrame->serializedData);
 
@@ -463,6 +462,7 @@ namespace newFileAvailable_serialization
                 break;
             }
         }
+        return newFrame;
     }
     FileInfo getFileInfo(Frame * frame)
     {
@@ -485,10 +485,10 @@ namespace newFileAvailable_serialization
 namespace peerLeavingFrame_serialization{
     Frame *
     createPeerLeavingFrame(std::string ip, std::string port){
-	Frame * newFrame = new Frame();
+        Frame * newFrame = new Frame();
         newFrame->serializedData[0] = (char)FrameType::PEER_LEAVE_NOTIFICATION;
-	portAndIp_serialization::setIp(ip, newFrame->serializedData);
-	portAndIp_serialization::setPort(port, newFrame->serializedData);
-        return newFrame;;
+        portAndIp_serialization::setIp(ip, newFrame->serializedData);
+        portAndIp_serialization::setPort(port, newFrame->serializedData);
+        return newFrame;
     }
 }
