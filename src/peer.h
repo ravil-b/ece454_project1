@@ -81,7 +81,8 @@ public:
     void stopConnection();
 
     enum State { CONNECTED, DISCONNECTED, INITIALIZING, UNKNOWN, 
-		 ERROR_STATE, WAITING_FOR_HANDSHAKE, ONLINE, OFFLINE } state_;
+		 ERROR_STATE, WAITING_FOR_HANDSHAKE, WAITING_FOR_FILE_LIST,
+		 WAITING_FOR_CHUNK_INFO, ONLINE, OFFLINE } state_;
 
     void stopDownloadLoop();
 
@@ -119,6 +120,7 @@ private:
     void pushNewFile(std::string fileName);
     void loadLocalFilesFromDisk();
     void loadLocalFileFromDisk(boost::filesystem::path p);
+    void changeStateToOnlineAndNotify();
     char getMaxFileNum();
     
     // The download loop where we monitor the local 
@@ -156,6 +158,7 @@ class Peers : public CliCmdHandler {
     void removePeer(Peer * peer);
     Peer ** getPeers();
     int getPeerCount();
+    int getOnlinePeerCount();
     void broadcastFrame(Frame * frame, Peer * fromPeer);
     Peer * getPeerFromIpAndPort(string ip, string port);
 

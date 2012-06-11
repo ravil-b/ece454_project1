@@ -155,9 +155,9 @@ Peers::broadcastFrame(Frame * frame, Peer * fromPeer){
     {
         if (i == fromPeer->getPeerNumber()) continue;
         Peer * p = peers_[i];
-	if (p->state_ == Peer::ONLINE){
-	    p->sendFrame(frame);
-	}
+        if (p->state_ == Peer::ONLINE){
+            p->sendFrame(frame);
+        }
     }
 }
 
@@ -171,6 +171,21 @@ int
 Peers::getPeerCount()
 {
     return peerCount_;
+}
+
+int
+Peers::getOnlinePeerCount()
+{
+    int onlinePeerCount = 0;
+    for (int i = 0; i < maxPeers; i++)
+    {
+        Peer * p = peers_[i];
+        if (p->state_ == Peer::ONLINE)
+        {
+            onlinePeerCount++;
+        }
+    }
+    return onlinePeerCount;
 }
 
 Peer *
@@ -243,18 +258,6 @@ Peer::initLocalPeer(){
 
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
-    // request a file list from a peer
-    Frame * frame = fileListRequestFrame_serialization::createFileListRequest();
-    for (int i = 0; i < maxPeers; i++)
-    {
-        Peer * p = (*peers_)[i];
-        if (p->state_ == ONLINE)
-        {
-            p->sendFrame(frame);
-            break;
-        }
-    }
-
     runDownloadLoop_ = true;
     boost::thread(boost::bind(&Peer::downloadLoop, this));
 
@@ -277,6 +280,8 @@ Peer::initRemotePeer(){
     Frame * handshakeRequestFrame = handshakeRequestFrame_serialization::createHandshakeRequestFrame();
     sendq_->push(handshakeRequestFrame);
 
+
+
     return errOK;
 }
 
@@ -284,9 +289,11 @@ Peer::initRemotePeer(){
 int 
 Peer::initLocalFileStore(){
     filesystem::path pathToLocalStore(LOCAL_STORAGE_PATH_NAME);
+
     if (!exists(pathToLocalStore)){
-	boost::filesystem::create_directories(pathToLocalStore);
+        boost::filesystem::create_directories(pathToLocalStore);
     }
+
     return errOK;
 }
 
@@ -322,6 +329,8 @@ Peer::handleRequest(Request request)
 
         case FrameType::HANDSHAKE_REQUEST:
         {
+            if (state_ != ONLINE) break;
+
             TRACE("peer.cpp" ,"Handshake Request Received");
             Frame * response = handshakeResponseFrame_serialization::createHandshakeResponseFrame(ipAddress_, port_);
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
@@ -341,15 +350,29 @@ Peer::handleRequest(Request request)
             TRACE("peer.cpp" ,"Handshake Response Received");
             std::string frameIp = portAndIp_serialization::getIp(request.frame->serializedData);
             std::string framePort = portAndIp_serialization::getPort(request.frame->serializedData);
-	    // change the status of the peer to connected.
-	    Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
-	    if (p != NULL){
-            TRACE("peer.cpp", "Received handshake. ONLINE");
-            p->state_ = ONLINE;
-	    }
-	    else{
-		TRACE("peer.cpp", "Received handshake, but unknown peer");
-	    }
+            // change the status of the peer to connected.
+            Peer *p = peers_->getPeerFromIpAndPort(frameIp, framePort);
+            if (p != NULL){
+                TRACE("peer.cpp", "Received handshake. ONLINE");
+                p->state_ = ONLINE;
+            }else{
+                TRACE("peer.cpp", "Received handshake, but unknown peer");
+            }
+
+            if (state_ == INITIALIZING)
+            {
+                state_ = WAITING_FOR_FILE_LIST;
+                TRACE("peer.cpp", "state_ now WAITING_FOR_FILE_LIST")
+                Frame * frame = fileListRequestFrame_serialization::createFileListRequest();
+                for (int i = 0; i < peers_->getPeerCount(); i++)
+                {
+                    Peer * peer = (*peers_)[i];
+                    if (peer->state_ == ONLINE)
+                    {
+                        peer->sendFrame(frame);
+                    }
+                }
+            }
         }
         break;
 
@@ -362,9 +385,14 @@ Peer::handleRequest(Request request)
             int chunkNum = chunkDataFrame_serialization::getChunkNum(frame);
             char * chunk = chunkDataFrame_serialization::getChunk(frame);
 
+            FileInfo * localFile = fileInfoList_.getFileFromFileNumber(fileNum);
+
+            boost::filesystem::path p(LOCAL_STORAGE_PATH_NAME);
+            p /= localFile->fileName;
+
             // should check some sort of checksum..
             fileChunkIO_->writeChunk(
-                    fileInfoList_.getFileFromFileNumber(fileNum)->fileName,
+                    p.string(),
                     chunkNum,
                     chunk);
         }
@@ -402,8 +430,8 @@ Peer::handleRequest(Request request)
             }
 
             char chunkBuff[chunkSize];
-	    boost::filesystem::path p(LOCAL_STORAGE_PATH_NAME);
-	    p /= fileName;
+            boost::filesystem::path p(LOCAL_STORAGE_PATH_NAME);
+            p /= fileName;
             if (fileChunkIO_->readChunk(p.string(), chunkNum, chunkBuff) != errFileChunkIOOK)
             {
                 // error reading the file..
@@ -475,10 +503,9 @@ Peer::handleRequest(Request request)
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
             fileInfoList_.files.push_back(newFile);
-	    numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
+            numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
             TRACE("peer.cpp", "Added new file")
-        }
-        break;
+        }break;
 
         case FrameType::CHUNK_INFO:
         {
@@ -511,14 +538,12 @@ Peer::handleRequest(Request request)
                 }
             }
 
-            if (haveChunkInfoForAllFiles())
+            if (state_ == WAITING_FOR_CHUNK_INFO && haveChunkInfoForAllFiles())
             {
-                Frame * joinFrame = peerJoinNotification_serialization::createPeerJoinNotification(getIpAddress(), getPort());
-                peers_->broadcastFrame(joinFrame, this);
+                changeStateToOnlineAndNotify();
             }
 
-        }
-        break;
+        }break;
 
         case FrameType::CHUNK_INFO_REQUEST:
         {
@@ -598,13 +623,26 @@ Peer::handleRequest(Request request)
         default:
             break;
 
-
     }
+}
+
+void Peer::changeStateToOnlineAndNotify()
+{
+    state_ = ONLINE;
+    TRACE("peer.cpp", "state_ now ONLINE")
+    Frame * joinFrame = peerJoinNotification_serialization::createPeerJoinNotification(getIpAddress(), getPort());
+    peers_->broadcastFrame(joinFrame, this);
 }
 
 void Peer::handleFileListFrame(Frame * fileListFrame)
 {
     std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(fileListFrame);
+
+    // if there are no files in the system, we're now online
+    if (fileInfos.size() == 0)
+    {
+        changeStateToOnlineAndNotify();
+    }
 
     for (int i = 0 ; i < (int)fileInfos.size(); i++)
     {
@@ -619,14 +657,19 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
             fileInfoList_.files.push_back(newFile);
         }
 
-        // for each peer, if we don't have chunk info for a file, request it
-        for (int peerIdx = 1; peerIdx < peers_->getPeerCount(); peerIdx++)
+        if (state_ == WAITING_FOR_FILE_LIST)
         {
-            Peer * p = (*peers_)[i];
-            if (!p->haveChunkInfo(f.fileNum))
+            state_ = WAITING_FOR_CHUNK_INFO;
+            TRACE("peer.cpp", "state_ now WAITING_FOR_CHUNK_INFO")
+            // for each peer, if we don't have chunk info for a file, request it
+            for (int peerIdx = 1; peerIdx < peers_->getPeerCount(); peerIdx++)
             {
-                Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
-                p->sendFrame(chunkInfoRequest);
+                Peer * p = (*peers_)[i];
+                if (!p->haveChunkInfo(f.fileNum))
+                {
+                    Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
+                    p->sendFrame(chunkInfoRequest);
+                }
             }
         }
     }
@@ -867,7 +910,14 @@ int Peer::join()
 
     // init every peer
     for (int i = 0; i < maxPeers; i++){
-	(*peers_)[i]->initPeer();
+        (*peers_)[i]->initPeer();
+    }
+
+    if (peers_->getOnlinePeerCount() == 0)
+    {
+        // if we're the only peer, set state to online
+        // so we skip trying to ask for file lists/ chunk info
+        state_ = ONLINE;
     }
 
     // for each file in each peer, set a value to say that we don't have chunk info for the file
