@@ -490,10 +490,11 @@ Peer::handleRequest(Request request)
             {
                 // couldn't find peer.. bad news
                 break;
-            }
-
-            // update the peer's chunk list to say that it now has this chunk
-            fileInfoList_.files[fileNum]->chunksDownloaded[chunkNum] = true;
+            } 
+	    else{
+		// update the peer's chunk list to say that it now has this chunk
+		p->fileInfoList_.files[fileNum]->chunksDownloaded[chunkNum] = true;
+	    }
         }
         break;
 
@@ -502,6 +503,7 @@ Peer::handleRequest(Request request)
             // update local file list
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
+	    cout << "Chunks total: " << newFile->chunkCount << endl;
             fileInfoList_.files.push_back(newFile);
             numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
             TRACE("peer.cpp", "Added new file")

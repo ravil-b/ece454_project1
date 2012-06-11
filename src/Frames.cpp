@@ -353,10 +353,11 @@ namespace chunkDataFrame_serialization
         chunk_serialization_helpers::setFileNum(newFrame->serializedData, fileNum);
         chunk_serialization_helpers::setChunkNum(newFrame->serializedData, chunkNum);
 
-        int i = sizeof(char) + sizeof(char) + sizeof(int);
-        for (; i < chunkSize; i++)
+	int frameOffset = sizeof(char) + sizeof(char) + sizeof(int);
+        
+        for (int i = 0; i < chunkSize; i++)
         {
-            newFrame->serializedData[i] = chunk[i];
+            newFrame->serializedData[i+frameOffset] = chunk[i];
         }
 
         return newFrame;
