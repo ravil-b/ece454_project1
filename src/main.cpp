@@ -184,6 +184,33 @@ testChunkInfoSerialization()
         }
 }
 
+
+void
+testFileListFrameSerialization()
+{
+
+    vector<FileInfo *> files;
+
+    FileInfo file;
+
+    file.fileName = "testFile";
+    file.fileNum = 10;
+    file.fileSize = 92;
+    file.chunkCount = (file.fileSize / chunkSize) + 1;
+
+    files.push_back(&file);
+
+    Frame * fileListFrame = fileListFrame_serialization::createFileListFrame(1, files);
+    vector<FileInfo *> dsFileInfos = fileListFrame_serialization::getFileInfos(fileListFrame);
+
+    printFrame(fileListFrame, 30);
+
+    cout << "dsFileInfo - name: " << dsFileInfos[0]->fileName << endl;
+    cout <<"num: " << (int)dsFileInfos[0]->fileNum <<
+           ", size: " << dsFileInfos[0]->fileSize << endl;
+
+}
+
 int
 main(int argc, char* argv[]){
     TRACE("main.cpp", "Starting up.");
@@ -197,11 +224,7 @@ main(int argc, char* argv[]){
     Peers *peers = new Peers(cli, "peers.txt");
     boost::thread peersThread(boost::bind(&Peers::initialize, peers));
 
-
-
-
-
-
+    testFileListFrameSerialization();
 
     TRACE("main.cpp", "Adding CLI Commands");
     Command insertCommand;

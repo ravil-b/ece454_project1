@@ -61,10 +61,11 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData, in
     {
 	// handle the case when we get the last chunk which is smaller than the rest
 	int chunkCount = fileSize/chunkSize;
-        if (fileSize % chunkSize != 0)
-        {
-            chunkCount++;
-        }
+    if (fileSize % chunkSize != 0)
+    {
+        chunkCount++;
+    }
+
 	int writeSize = chunkSize;
 	if (chunkNum == chunkCount - 1){
 	    writeSize = fileSize - ((chunkCount - 1) * chunkSize);

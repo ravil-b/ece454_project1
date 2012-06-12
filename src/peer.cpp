@@ -684,7 +684,7 @@ void Peer::changeStateToOnlineAndNotify()
 
 void Peer::handleFileListFrame(Frame * fileListFrame)
 {
-    std::vector<FileInfo> fileInfos = fileListFrame_serialization::getFileInfos(fileListFrame);
+    std::vector<FileInfo *> fileInfos = fileListFrame_serialization::getFileInfos(fileListFrame);
 
     // if there are no files in the system, we're now online
     if (fileInfos.size() == 0)
@@ -694,19 +694,27 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
 
     for (int fileIdx = 0 ; fileIdx < (int)fileInfos.size(); fileIdx++)
     {
-        FileInfo f = fileInfos[fileIdx];
-        cout << "Got filename: " << f.fileName << endl;
-        cout << "Got file num: " << f.fileNum << endl;
-        cout << "Got chunk count: " << f.chunkCount << endl;
+        FileInfo * f = fileInfos[fileIdx];
 
-        if (!fileInfoList_.contains(&f))
+        cout << "Got filename: " << f->fileName << endl;
+        cout << "Got file num: " << f->fileNum << endl;
+        cout << "Got file size: " << f->fileSize << endl;
+
+        f->chunkCount = f->fileSize / chunkSize;
+        if (f->fileSize % chunkSize != 0)
         {
-            FileInfo * newFile = new FileInfo(f);
+            f->chunkCount++;
+        }
 
+        cout << "Calculated chunk count: " << f->chunkCount;
+
+
+        if (!fileInfoList_.contains(f))
+        {
             for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
             {
                 Peer * p = (*peers_)[peerIdx];
-                p->fileInfoList_.files.push_back(newFile);
+                p->fileInfoList_.files.push_back(f);
             }
 
         }
@@ -721,9 +729,9 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
                 Peer * p = (*peers_)[peerIdx];
 
                 TRACE("peer.cpp", "Found peer")
-                cout << "state: " << p->state_ << " !haveChunkInfo(f.filenum): " << !p->haveChunkInfo(f.fileNum) << endl;
+                cout << "state: " << p->state_ << " !haveChunkInfo(f.filenum): " << !p->haveChunkInfo(f->fileNum) << endl;
 
-                if (p->state_ == ONLINE && !p->haveChunkInfo(f.fileNum))
+                if (p->state_ == ONLINE && !p->haveChunkInfo(f->fileNum))
                 {
                     Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
                     p->sendFrame(chunkInfoRequest);
@@ -777,8 +785,10 @@ Peer::loadLocalFileFromDisk(boost::filesystem::path path)
         {
             f->chunkCount++;
         }
-	f->fileSize = fileSize;
-	cout << "File size is " << fileSize << endl;
+
+        f->fileSize = fileSize;
+
+        cout << "File size is " << fileSize << endl;
         f->fileNum = getMaxFileNum() + 1;
 
         for (int i = 0; i < f->chunkCount; i++)
@@ -992,18 +1002,22 @@ int Peer::leave()
 int Peer::join()
 {
     if (receiveq_ != NULL){
-	// TODO delete every frame
-	delete receiveq_;
-	receiveq_ = NULL;
+        // TODO delete every frame
+        delete receiveq_;
+        receiveq_ = NULL;
     }
     
     peers_->connection_ = new Connection();
     receiveq_ = new ThreadSafeQueue<Request>();
 
+    TRACE("peer.cpp","INITING PEERS");
+
     // init every peer
     for (int i = 0; i < maxPeers; i++){
         (*peers_)[i]->initPeer();
     }
+
+    TRACE("peer.cpp", "GET ONLINE PEER COUNT");
 
     if (peers_->getOnlinePeerCount() == 0)
     {
@@ -1022,6 +1036,8 @@ int Peer::join()
             peer->setHaveChunkInfo(f->fileNum, false);
         }
     }
+
+    TRACE("peer.cpp", "RETURNING OK");
 
     return errOK;
 }

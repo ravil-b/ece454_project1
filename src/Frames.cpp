@@ -48,9 +48,25 @@ namespace serialization_helpers{
         FileInfo f;
         f.fileNum = array[startIndex];
         f.chunkCount = serialization_helpers::parseIntFromCharArray(array, startIndex + 1);
-	f.fileSize = serialization_helpers::parseIntFromCharArray(array, startIndex + 5);
+        f.fileSize = serialization_helpers::parseIntFromCharArray(array, startIndex + 5);
         std::string fileName (array + 9 + startIndex, MAX_FILE_NAME_LENGTH);
         f.fileName = fileName;
+
+        return f;
+    }
+
+    FileInfo *
+    parseFileInfoNoChunkCount(char * array, int startIndex)
+    {
+        FileInfo * f = new FileInfo();
+        f->fileNum = array[startIndex];
+        f->fileSize = serialization_helpers::parseIntFromCharArray(array, startIndex + 1);
+
+        std::cout << "parsed filesize: " << f->fileSize << std::endl;
+
+
+        std::string fileName (array + 5 + startIndex, MAX_FILE_NAME_LENGTH);
+        f->fileName = fileName;
 
         return f;
     }
@@ -74,7 +90,7 @@ namespace serialization_helpers{
         short toReturn = 0;
         for (int i = 0; i < 2; i++)
         {
-            toReturn = (toReturn << 8) + array[i];
+            toReturn = (toReturn << 8) + (unsigned)array[i];
         }
         return toReturn;
     }
@@ -91,7 +107,7 @@ namespace serialization_helpers{
     void
     copyShortToCharArray(char * array, short toCopy)
     {
-	array[1] = (toCopy>>8)  & 0xff;
+        array[1] = (toCopy>>8)  & 0xff;
         array[0] = toCopy & 0xff;
     }
 }
@@ -111,38 +127,46 @@ namespace fileListFrame_serialization{
             FileInfo * file = files[i];
 	    
             frame->serializedData[serialDataIdx] = file->fileNum;	    
-            serialization_helpers::copyIntToCharArray(frame->serializedData + serialDataIdx + 1, file->chunkCount);
+            serialization_helpers::copyIntToCharArray(frame->serializedData + serialDataIdx + 1, (unsigned)file->fileSize);
 
-	    // File name
-	    const char *fName = file->fileName.c_str();
-	    for (int y = 0; y < 512; y++){
-		frame->serializedData[serialDataIdx + y + 5] = fName[y];
-		if (fName[y] == 0){
-		    break;
-		}
-	    }
-        }
+            // File name
+            const char *fName = file->fileName.c_str();
+            for (int y = 0; y < 512; y++){
+                frame->serializedData[serialDataIdx + y + 5] = fName[y];
 
-	std::vector<FileInfo> fileInfos = getFileInfos(frame);
-	for (unsigned int i = 0; i < fileInfos.size(); i++)
-	{
-	    FileInfo f = fileInfos[i];
-	}
+                if (fName[y] == 0){
+                    break;
+                }
+            }
+    }
+
+//        std::vector<FileInfo *> fileInfos = getFileInfos(frame);
+//        for (unsigned int i = 0; i < fileInfos.size(); i++)
+//        {
+//            FileInfo * f = fileInfos[i];
+//        }
 
 
 	return frame;
     }
 
-    std::vector<FileInfo>
+    std::vector<FileInfo *>
     getFileInfos(Frame * frame)
     {
-	char fileCount = frame->serializedData[1];
-        std::vector<FileInfo> fileInfos;
-	int endIterIdx = (fileCount * FILE_INFO_DATA_WIDTH) + 2;
+        char fileCount = frame->serializedData[1];
+        std::vector<FileInfo *> fileInfos;
+        int endIterIdx = (fileCount * FILE_INFO_DATA_WIDTH) + 2;
+
         for (int i = 2; i < endIterIdx; i += FILE_INFO_DATA_WIDTH)
         {
-            FileInfo f = serialization_helpers::parseFileInfo(frame->serializedData, i);
+            FileInfo * f = serialization_helpers::parseFileInfoNoChunkCount(frame->serializedData, i);
+
+            std::cout << "returned filesize:" << f->fileSize << std::endl;
+
             fileInfos.push_back(f);
+
+            std::cout << "fileInfos[0].filesize:" << fileInfos[0]->fileSize << std::endl;
+
         }
         return fileInfos;
     }

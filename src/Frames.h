@@ -12,7 +12,7 @@ const int FRAME_LENGTH = 65542;
 const short MAX_FILE_NAME_LENGTH = 512;
 
 
-//                                           fileNum        totalChunks            fileName
+//                                           fileNum        fileSize            fileName
 const short FILE_INFO_DATA_WIDTH =          sizeof(char) +  sizeof(int)    +   MAX_FILE_NAME_LENGTH;
 const short TOTAL_CHUNKS_AT_SOURCE_OFFSET =   sizeof(char) +  sizeof(int);
 
@@ -115,7 +115,7 @@ namespace portAndIp_serialization{
 namespace fileListFrame_serialization{
     Frame *
     createFileListFrame(char fileCount, std::vector<FileInfo *> files);
-    std::vector<FileInfo> getFileInfos(Frame * frame);
+    std::vector<FileInfo *> getFileInfos(Frame * frame);
     char getFileCount();
 };
 
