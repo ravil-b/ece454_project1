@@ -413,7 +413,7 @@ Peer::handleRequest(Request request)
                     p.string(),
                     chunkNum,
                     chunk,
-                    65536); /// TODO Fill in the file size
+                    localFile->fileSize);
 	    
 	    // get a map of chunks downloaded for this file
 	    map<int, bool> *chunksDownloaded = 
@@ -530,8 +530,9 @@ Peer::handleRequest(Request request)
             // update local file list
             TRACE("peer.cpp", "Got NEW_FILE_AVAILABLE frame.")
             FileInfo * newFile = new FileInfo(newFileAvailable_serialization::getFileInfo(frame));
-            newFile->fileSize = newFile->chunkCount * chunkSize;
-            cout << "Chunks total: " << newFile->chunkCount << endl;
+	        //newFile->fileSize = newFile->chunkCount * chunkSize;
+	        cout << "File Size: " << newFile->fileSize << endl;
+	        cout << "Chunks total: " << newFile->chunkCount << endl;
             fileInfoList_.files.push_back(newFile);
             numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
             TRACE("peer.cpp", "Added new file")
@@ -776,6 +777,8 @@ Peer::loadLocalFileFromDisk(boost::filesystem::path path)
         {
             f->chunkCount++;
         }
+	f->fileSize = fileSize;
+	cout << "File size is " << fileSize << endl;
         f->fileNum = getMaxFileNum() + 1;
 
         for (int i = 0; i < f->chunkCount; i++)
@@ -1100,6 +1103,7 @@ Peer::disconnect(){
 void 
 Peer::stopConnection(){
     sendq_->stopReading();
+    state_ = DISCONNECTED;
 }
 
 void
@@ -1124,24 +1128,24 @@ Peer::downloadLoop(){
                 // iterate chunks downloaded
                 std::map<int, bool>::iterator chunksInter = fileInfo->chunksDownloaded.begin();
 
-            bool chunkFound = false;
-            for ( ; chunksInter != fileInfo->chunksDownloaded.end(); chunksInter++){
-                if (chunksInter->second == false){
-                    cout << "Found chunk to download" << endl;
-                    cout << "file number " << numChunksIter->first << endl;
-                    cout << "chunk number " << chunksInter->first << endl;
-                    chunkFound = true;
-                    break;
+                bool chunkFound = false;
+                for ( ; chunksInter != fileInfo->chunksDownloaded.end(); chunksInter++){
+                    if (chunksInter->second == false){
+                        cout << "Found chunk to download" << endl;
+                        cout << "file number " << numChunksIter->first << endl;
+                        cout << "chunk number " << chunksInter->first << endl;
+                        chunkFound = true;
+                        break;
+                    }
+                }
+                if (chunkFound){
+                    Frame *newFrame = chunkRequestFrame_serialization::
+                    createChunkRequestFrame(numChunksIter->first, chunksInter->first);
+                    (*peers_)[1]->sendFrame(newFrame);
+                    numChunksIter->second++;
                 }
             }
-            if (chunkFound){
-                Frame *newFrame = chunkRequestFrame_serialization::
-                createChunkRequestFrame(numChunksIter->first, chunksInter->first);
-                (*peers_)[1]->sendFrame(newFrame);
-                numChunksIter->second++;
-            }
         }
-	}
-}
+    }
 }
 

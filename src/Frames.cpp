@@ -14,7 +14,6 @@
 #include <iostream>
 #include <bitset>
 
-
 char
 Frame::getFrameType()
 {
@@ -49,7 +48,8 @@ namespace serialization_helpers{
         FileInfo f;
         f.fileNum = array[startIndex];
         f.chunkCount = serialization_helpers::parseIntFromCharArray(array, startIndex + 1);
-        std::string fileName (array + 5 + startIndex, MAX_FILE_NAME_LENGTH);
+	f.fileSize = serialization_helpers::parseIntFromCharArray(array, startIndex + 5);
+        std::string fileName (array + 9 + startIndex, MAX_FILE_NAME_LENGTH);
         f.fileName = fileName;
 
         return f;
@@ -61,7 +61,9 @@ namespace serialization_helpers{
         int toReturn = 0;
         for (int i = startIndex; i < (4 + startIndex); i++)
         {
-            toReturn = (toReturn << 8) + array[i];
+	    int tmp = (unsigned)array[i];
+	    tmp &= 0xff;
+            toReturn = (toReturn << 8) + tmp;
         }
         return toReturn;
     }
@@ -464,7 +466,8 @@ namespace newFileAvailable_serialization
 {
     const unsigned int fileNumIdx = sizeof(char) + 15 + 5;
     const unsigned int chunkCountIdx = sizeof(char) + 15 + 5 + sizeof(char);
-    const unsigned int fileNameIdx = sizeof(char) + 15 + 5 + sizeof(char) + sizeof(int);
+    const unsigned int fileSizeIdx = sizeof(char) + 15 + 5 + sizeof(char) + sizeof(int); 
+    const unsigned int fileNameIdx = sizeof(char) + 15 + 5 + sizeof(char) + sizeof(int) + sizeof(int);
 
     Frame *
     createNewFileAvailableFrame(FileInfo * file, std::string ip, std::string port)
@@ -477,9 +480,7 @@ namespace newFileAvailable_serialization
 
         newFrame->serializedData[fileNumIdx] = file->fileNum;
         serialization_helpers::copyIntToCharArray(newFrame->serializedData + chunkCountIdx, file->chunkCount);
-
-
-
+	serialization_helpers::copyIntToCharArray(newFrame->serializedData + fileSizeIdx, file->fileSize);
 
         const char *fName = file->fileName.c_str();
         for (int y = 0; y < 512; y++){

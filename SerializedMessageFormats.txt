@@ -77,10 +77,9 @@ Max # of files = floor(65541 / (512 + 1 + 4)) = 126    -- so we can fit all 100 
 
 // NEW_FILE_AVAILABLE
 
-| messageType |     ip      |    port    |   fileNum   |   chunkCount   |    fileName   |
------------------------------------------------------------------------------------------
-|     char    |   char[15]  |   char[5]  |    char     |      int       |   char[512]   |
-
+| messageType |     ip      |    port    |   fileNum   |   chunkCount   |  fileSize  |    fileName   |
+--------------------------------------------------------------------------------------------------------
+|     char    |   char[15]  |    short   |    char     |      int       |    int     |   char[512]   |
 
 
 // NEW_CHUNK_AVAILABLE

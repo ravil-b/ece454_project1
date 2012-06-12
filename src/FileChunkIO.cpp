@@ -15,7 +15,6 @@
 
 #include <iostream>
 
-
 using namespace std;
 using namespace boost;
 using boost::iostreams::file_source;
@@ -60,10 +59,23 @@ FileChunkIO::writeChunk(std::string fileName, int chunkNum, char * chunkData, in
 
     try
     {
+	// handle the case when we get the last chunk which is smaller than the rest
+	int chunkCount = fileSize/chunkSize;
+        if (fileSize % chunkSize != 0)
+        {
+            chunkCount++;
+        }
+	int writeSize = chunkSize;
+	if (chunkNum == chunkCount - 1){
+	    writeSize = fileSize - ((chunkCount - 1) * chunkSize);
+	}
+	cout << "Write size is " << writeSize << endl;
+	cout << "Chunk count is " << chunkCount << endl;
+	cout << "chunkNum is " << chunkNum << endl;
 	createFileIfNotExists(fileName, fileSize);
 	fstream out(fileName.c_str(), ios::binary | ios::out | ios::in);
 	out.seekp(chunkNum * chunkSize, ios::beg);
-	out.write(chunkData, chunkSize);
+	out.write(chunkData, writeSize);
 	// For some reason, the following overrides the file:
         //file_sink localFile(fileName, std::ios_base::out);
         //boost::iostreams::seek(localFile, chunkNum * chunkSize, BOOST_IOS::beg);
@@ -82,7 +94,8 @@ void
 FileChunkIO::createFileIfNotExists(std::string fileName, int fileSize){
     filesystem::path p(fileName);
     // if the file doesn't exist, create it with the max size;
-    if (!exists(p)){
+    if (!exists(p)){\
+	cout << "Creating file with size " << fileSize << endl;
 	file_sink localFile(fileName, std::ios_base::out);
 	boost::iostreams::seek(localFile, fileSize - 1, BOOST_IOS::beg);
 	char data[1];
