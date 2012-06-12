@@ -60,8 +60,8 @@ Peers::initialize(){
 	    splitLine.erase(newEnd, splitLine.end());
 	    // Ensure that we have both the ip and peer
 	    if (splitLine.size() != 2){
-		TRACE("peer.cpp", "The peers file has wrong format");
-		return errPeersFileFmtFail;
+	        TRACE("peer.cpp", "The peers file has wrong format");
+		    return errPeersFileFmtFail;
 	    }
 	    addPeer(new Peer(lineNum, splitLine[0], splitLine[1], this));
 	    lineNum++;
@@ -76,6 +76,24 @@ Peers::initialize(){
 	    cerr << "CANNOT INITIALIZE LOCAL FILE STORAGE. Quitting." << endl;
 	    // TODO exit the program
 	}
+
+	int onlinePeerCount = 0;
+	for (int i = 1; i < maxPeers; i++)
+	{
+	    Peer * peer = peers_[i];
+	    if (peer->state_ != Peer::OFFLINE)
+	    {
+	        onlinePeerCount ++;
+	    }
+	}
+
+	if (onlinePeerCount == 0)
+	{
+	    peers_[0]->changeStateToOnlineAndNotify();
+//        peers_[0]->loadLocalFilesFromDisk();
+	}
+
+
 	return errOK;
     }
     TRACE("peer.cpp", "Failed to open peers file for reading");
@@ -197,22 +215,13 @@ Peers::operator[] (int i)
 Peer *
 Peers::getRemotePeerFromIpAndPort(string ip, string port)
 {
-    cout << "Looking up peer by ip and port"  << endl;
-    cout << "IP: " << ip << endl;
-    cout << "Port: " << port << endl;
-
     for (int i = 1; i < getPeerCount(); i ++)
     {
         Peer * p = peers_[i];
 
-        cout << "Peer Index:" << i <<  endl;
-        cout << "Peer IP: " << ip << endl;
-        cout << "Peer Port: " << port << endl;
-
         if ( (strcmp(ip.c_str(), p->getIpAddress().c_str()) == 0)
 	     &&  (strcmp(port.c_str(), p->getPort().c_str()) == 0) )
         {
-            cout << "Found peer at index: " << i << endl;
             return p;
         }
     }
@@ -269,11 +278,9 @@ Peer::initLocalPeer(){
     fileChunkIO_ = new FileChunkIO();
 
     if (peers_->connection_->startServer(port_, receiveq_))
-       {
-           cerr << "FAILED TO START THE SERVER." << endl;
-       }
-
-    loadLocalFilesFromDisk();
+    {
+        cerr << "FAILED TO START THE SERVER." << endl;
+    }
 
     incomingConnectionsThread_ = new thread(boost::bind(&Peer::acceptConnections, this));
 
@@ -446,9 +453,10 @@ Peer::handleRequest(Request request)
 	    
             ThreadSafeQueue<Frame *> * q = peers_->connection_->getReplyQueue(request.requestId);
 
-            if (!fileInfoList_.getFileFromFileNumber(fileNum)->chunksDownloaded[chunkNum])
+            if (fileInfoList_.getFileFromFileNumber(fileNum)->chunksDownloaded[chunkNum] == false)
             {
                 std::cout <<"CHUNK_REQUEST DECLINE" << std::endl;
+                std::cout <<"CHUNK_REQUEST Asked for fileNum: " << fileNum << " chunkNum: " << chunkNum << std::endl;
                 // we don't have this chunk, so send back a decline
                 Frame * f = chunkRequestDecline_serialization::createChunkRequestDeclineFrame(fileNum, chunkNum);
                 q->push(f);
@@ -518,10 +526,11 @@ Peer::handleRequest(Request request)
                 // couldn't find peer.. bad news
                 break;
             } 
-	    else{
-		// update the peer's chunk list to say that it now has this chunk
-		p->fileInfoList_.files[fileNum]->chunksDownloaded[chunkNum] = true;
-	    }
+            else
+            {
+                // update the peer's chunk list to say that it now has this chunk
+                p->fileInfoList_.files[fileNum]->chunksDownloaded[chunkNum] = true;
+            }
         }
         break;
 
@@ -555,6 +564,8 @@ Peer::handleRequest(Request request)
 
 
             TRACE("peer.cpp", "Iterating through files provided by CHUNK_INFO");
+            cout << "Number of files in chunk_info: " << fileChunkMap.size() << endl;
+
             // loop for each file
             for (fileIter = fileChunkMap.begin(); fileIter != fileChunkMap.end(); ++fileIter)
             {
@@ -567,11 +578,16 @@ Peer::handleRequest(Request request)
                     break;
                 }
 
+                FileInfo * locf = getFileInfoList().getFileFromFileNumber(fileIter->first);
+
+                cout << "locf->chunksDownloaded[0] = " << locf->chunksDownloaded[0] << endl;
+                cout << "locf->chunksDownloaded[1] = " << locf->chunksDownloaded[1] << endl;
+
 
                 std::map<int, bool> chunkMap = fileChunkMap[fileIter->first];
                 // loop for each chunk
                 TRACE("peer.cpp", "Iterating through chunks.");
-                for (int chunkIdx = 0; chunkIdx < f->chunkCount; ++chunkIdx)
+                for (int chunkIdx = 0; chunkIdx < f->chunkCount; chunkIdx++)
                 {
 
                     // update the peer's FileInfo struct to reflect
@@ -581,8 +597,16 @@ Peer::handleRequest(Request request)
 
                 TRACE("peer.cpp", "Done Iterating through chunks.");
 
-                fromPeer->setHaveChunkInfo(f->fileNum, true);
 
+                cout << "chunkCount = " << f->chunkCount << endl;
+
+                cout << "chunkMap[0] = "  << chunkMap[0] << endl;
+                cout << "chunkMap[1] = "  << chunkMap[1] << endl;
+
+                cout << "locf->chunksDownloaded[0] = " << locf->chunksDownloaded[0] << endl;
+                cout << "locf->chunksDownloaded[1] = " << locf->chunksDownloaded[1] << endl;
+
+                fromPeer->setHaveChunkInfo(f->fileNum, true);
                 queueFileDownload(f->fileNum);
             }
 
@@ -689,7 +713,9 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
     // if there are no files in the system, we're now online
     if (fileInfos.size() == 0)
     {
+        //loadLocalFilesFromDisk();
         changeStateToOnlineAndNotify();
+        return;
     }
 
     for (int fileIdx = 0 ; fileIdx < (int)fileInfos.size(); fileIdx++)
@@ -697,7 +723,7 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
         FileInfo * f = fileInfos[fileIdx];
 
         cout << "Got filename: " << f->fileName << endl;
-        cout << "Got file num: " << f->fileNum << endl;
+        cout << "Got file num: " << (int)f->fileNum << endl;
         cout << "Got file size: " << f->fileSize << endl;
 
         f->chunkCount = f->fileSize / chunkSize;
@@ -706,18 +732,18 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
             f->chunkCount++;
         }
 
-        cout << "Calculated chunk count: " << f->chunkCount;
+        cout << "Calculated chunk count: " << f->chunkCount << endl;
 
 
-        if (!fileInfoList_.contains(f))
+        for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
         {
-            for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
-            {
-                Peer * p = (*peers_)[peerIdx];
+            Peer * p = (*peers_)[peerIdx];
+            if (!p->fileInfoList_.contains(f))
                 p->fileInfoList_.files.push_back(f);
-            }
-
         }
+
+        //loadLocalFilesFromDisk();
+
 
         if (this->state_ == WAITING_FOR_FILE_LIST)
         {
@@ -727,10 +753,6 @@ void Peer::handleFileListFrame(Frame * fileListFrame)
             for (int peerIdx = 1; peerIdx < peers_->getPeerCount(); peerIdx++)
             {
                 Peer * p = (*peers_)[peerIdx];
-
-                TRACE("peer.cpp", "Found peer")
-                cout << "state: " << p->state_ << " !haveChunkInfo(f.filenum): " << !p->haveChunkInfo(f->fileNum) << endl;
-
                 if (p->state_ == ONLINE && !p->haveChunkInfo(f->fileNum))
                 {
                     Frame * chunkInfoRequest = chunkInfoRequest_serialization::createChunkInfoRequest();
@@ -1133,7 +1155,8 @@ Peer::downloadLoop(){
     while (runDownloadLoop_){
         std::map<char, char>::iterator numChunksIter = numChunksRequested_.begin();
 
-        for ( ; numChunksIter != numChunksRequested_.end(); numChunksIter++){
+        for ( ; numChunksIter != numChunksRequested_.end(); numChunksIter++)
+        {
             if (numChunksIter->second < MAX_FILE_CHUNKS_REQEST){
                 // request another chunk for this file
                 std::vector<FileInfo *>::iterator fileListIter = fileInfoList_.files.begin();

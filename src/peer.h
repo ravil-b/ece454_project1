@@ -59,6 +59,9 @@ public:
     int initRemotePeer();
     int initLocalFileStore();
 
+    void changeStateToOnlineAndNotify();
+    void loadLocalFilesFromDisk();
+
     int getPeerNumber();
     string getIpAddress();
     string getPort();
@@ -119,9 +122,9 @@ private:
     void handleRequest(Request request);
     void handleFileListFrame(Frame * fileListFrame);
     void pushNewFile(std::string fileName);
-    void loadLocalFilesFromDisk();
+
     void loadLocalFileFromDisk(boost::filesystem::path p);
-    void changeStateToOnlineAndNotify();
+
     char getMaxFileNum();
     void queueFileDownload(char fileNum);
     

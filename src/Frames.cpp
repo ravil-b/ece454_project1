@@ -61,12 +61,13 @@ namespace serialization_helpers{
         FileInfo * f = new FileInfo();
         f->fileNum = array[startIndex];
         f->fileSize = serialization_helpers::parseIntFromCharArray(array, startIndex + 1);
-
-        std::cout << "parsed filesize: " << f->fileSize << std::endl;
-
-
         std::string fileName (array + 5 + startIndex, MAX_FILE_NAME_LENGTH);
         f->fileName = fileName;
+        for (int i = 0; i < chunkSize; i++)
+        {
+            f->chunksDownloaded[i] = false;
+        }
+
 
         return f;
     }
@@ -161,11 +162,7 @@ namespace fileListFrame_serialization{
         {
             FileInfo * f = serialization_helpers::parseFileInfoNoChunkCount(frame->serializedData, i);
 
-            std::cout << "returned filesize:" << f->fileSize << std::endl;
-
             fileInfos.push_back(f);
-
-            std::cout << "fileInfos[0].filesize:" << fileInfos[0]->fileSize << std::endl;
 
         }
         return fileInfos;
