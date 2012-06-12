@@ -164,6 +164,7 @@ class Peers : public CliCmdHandler {
     Peer ** getPeers();
     int getPeerCount();
     int getOnlinePeerCount();
+    int getRemotePeerCountByState(Peer::State);
     void broadcastFrame(Frame * frame, Peer * fromPeer);
     Peer * getRemotePeerFromIpAndPort(string ip, string port);
 
@@ -200,7 +201,7 @@ public:
     void setLeastReplication(char fileNum, int totalChunkCountInAllPeers);
     void setWeightedLeastReplication(char fileNum, float totalChunkFractionInAllPeers);
 
-    std::string toString(char numFiles);
+    std::string toString(char numFiles, FileInfoList *fileInfoList = NULL);
 
 private:
     // This is very cheesy and very lazy, but the focus of this assignment

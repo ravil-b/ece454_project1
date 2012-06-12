@@ -449,8 +449,13 @@ namespace chunkRequestDecline_serialization
 
 namespace newChunkAvailable_serialization
 {
-    const unsigned int fileNumIdx = sizeof(char) + 15 + 5;
-    const unsigned int chunkNumIdx = sizeof(char) + 15 + 5 + sizeof(char);
+    // frame type - char
+    // ip         - 15 char
+    // port       - 5 char
+    // fileNum    - 1 char
+    // chunkNum   - 4 charn
+    const unsigned int fileNumIdx = sizeof(char)*21;
+    const unsigned int chunkNumIdx = sizeof(char)*22;
 
     Frame *
     createNewChunkAvailableFrame(char fileNum, int chunkNum, std::string ip, std::string port)
@@ -466,11 +471,13 @@ namespace newChunkAvailable_serialization
     }
     char getFileNum(Frame * frame)
     {
-        return chunk_serialization_helpers::getFileNum(frame->serializedData + fileNumIdx);
+	// this is very bad. let's just make it work for the demo :(
+        return chunk_serialization_helpers::getFileNum(frame->serializedData + fileNumIdx - 1);
     }
     int getChunkNum(Frame * frame)
     {
-        return chunk_serialization_helpers::getChunkNum(frame->serializedData + chunkNumIdx);
+	// this is equally as bad
+        return chunk_serialization_helpers::getChunkNum(frame->serializedData + chunkNumIdx - 2);
     }
 
     std::string getIp(Frame * frame)

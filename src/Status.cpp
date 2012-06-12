@@ -34,18 +34,26 @@ Status::setWeightedLeastReplication(char fileNum, float totalChunkFractionInAllP
 }
 
 std::string
-Status::toString(char numFiles)
+Status::toString(char numFiles, FileInfoList *fileInfoList)
 {
     std::stringstream toReturn;
     toReturn << "_numFiles: " << _numFiles << std::endl;
 
-    for (int i; i < numFiles; i++)
+    for (int i = 0; i < numFiles; i++)
     {
-        toReturn << "fileNum: " << i << std::endl;
-        toReturn << "_local: " << _local[i] << std::endl;
-        toReturn << "_system: " << _system[i] << std::endl;
-        toReturn << "_leastReplication: " << _leastReplication[i] << std::endl;
+	toReturn << "----------------------------------" << std::endl;
+	toReturn << "File Number:               " << i << std::endl;
+	if (fileInfoList != NULL){
+	    FileInfo *fi = fileInfoList->getFileFromFileNumber(i);
+	    toReturn << "File Name:                 " << fi->fileName << std::endl;
+	    toReturn << "File Size:                 " << fi->fileSize << std::endl;
+	    toReturn << "Chunks:                    " << fi->chunkCount << std::endl;
+	}        
+        toReturn << "_local:                    " << _local[i] << std::endl;
+        toReturn << "_system:                   " << _system[i] << std::endl;
+        toReturn << "_leastReplication:         " << _leastReplication[i] << std::endl;
         toReturn << "_weightedLeastReplication: " << _weightedLeastReplication[i] << std::endl;
+	toReturn << "----------------------------------" << std::endl;
     }
 
     return toReturn.str();
