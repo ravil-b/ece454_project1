@@ -607,6 +607,22 @@ Peer::handleRequest(Request request)
 	    cout << "Chunks total: " << newFile->chunkCount << endl;
             fileInfoList_.files.push_back(newFile);
             numChunksRequested_.insert(make_pair(newFile->fileNum, 0));
+	    // add it to source peer info
+	    FileInfo *remoteFile = new FileInfo;
+	    remoteFile->fileName = newFile->fileName;
+	    remoteFile->fileNum = newFile->fileNum;
+	    remoteFile->chunkCount = newFile->chunkCount;
+	    remoteFile->fileSize = newFile->fileSize;
+	    map<int, bool> remChunksDownloaded;
+	    for (int i = 0; i < remoteFile->chunkCount; i++){
+		remChunksDownloaded.insert(make_pair(i, true));
+	    }
+	    remoteFile->chunksDownloaded.insert(remChunksDownloaded.begin(),
+						remChunksDownloaded.end());
+	    string ip = chunkInfo_serialization::getIp(frame);
+            string port = chunkInfo_serialization::getPort(frame);
+	    Peer * fromPeer = peers_->getRemotePeerFromIpAndPort(ip, port);
+	    fromPeer->fileInfoList_.files.push_back(remoteFile);
             TRACE("peer.cpp", "Added new file")
         }break;
 
@@ -646,25 +662,25 @@ Peer::handleRequest(Request request)
                 cout << "locf->chunksDownloaded[0] = " << locf->chunksDownloaded[0] << endl;
                 cout << "locf->chunksDownloaded[1] = " << locf->chunksDownloaded[1] << endl;
 
-
-                std::map<int, bool> chunkMap = fileChunkMap[fileIter->first];
+                //std::map<int, bool> chunkMap = fileChunkMap[fileIter->first];
+		f->chunksDownloaded.insert(fileChunkMap[fileIter->first].begin(), fileChunkMap[fileIter->first].end());
                 // loop for each chunk
-                TRACE("peer.cpp", "Iterating through chunks.");
-                for (int chunkIdx = 0; chunkIdx < f->chunkCount; chunkIdx++)
-                {
+                // TRACE("peer.cpp", "Iterating through chunks.");
+                // for (int chunkIdx = 0; chunkIdx < f->chunkCount; chunkIdx++)
+                // {
 
-                    // update the peer's FileInfo struct to reflect
-                    // which chunks it has downloaded
-                    f->chunksDownloaded[chunkIdx] = chunkMap[chunkIdx];
-                }
+                //     // update the peer's FileInfo struct to reflect
+                //     // which chunks it has downloaded
+                //     f->chunksDownloaded[chunkIdx] = chunkMap[chunkIdx];
+                // }
 
-                TRACE("peer.cpp", "Done Iterating through chunks.");
+                // TRACE("peer.cpp", "Done Iterating through chunks.");
 
 
                 cout << "chunkCount = " << f->chunkCount << endl;
 
-                cout << "chunkMap[0] = "  << chunkMap[0] << endl;
-                cout << "chunkMap[1] = "  << chunkMap[1] << endl;
+                cout << "chunkMap[0] = "  << fileChunkMap[fileIter->first][0] << endl;
+                cout << "chunkMap[1] = "  << fileChunkMap[fileIter->first][1] << endl;
 
                 cout << "locf->chunksDownloaded[0] = " << locf->chunksDownloaded[0] << endl;
                 cout << "locf->chunksDownloaded[1] = " << locf->chunksDownloaded[1] << endl;
@@ -691,24 +707,18 @@ Peer::handleRequest(Request request)
             // for each file in this peer
             for (char i = 0; i < (char)fileInfoList_.files.size(); i++)
             {
-                FileInfo * file = fileInfoList_.files[i];
-
-                std::map<int, bool> chunkMap;
-                fileChunkMap.insert(make_pair(file->fileNum, chunkMap));
-
+                FileInfo * file = fileInfoList_.files[i];                
 
                 if (i > 14)
                 {
                     // we need to start a new reply.. skip this for now
                     // TODO: implement this
                 }
-
-                std::map<int, bool>::iterator chunkIter;
-                // for each chunk of this file, copy the chunk isDownloaded value to our new map
-                for (chunkIter = file->chunksDownloaded.begin(); chunkIter != file->chunksDownloaded.end(); chunkIter++)
-                {
-                    chunkMap.insert(make_pair(chunkIter->first, chunkIter->second));
-                }
+		
+		// copy the chunks downloaded info
+		std::map<int, bool> chunkMap;
+		chunkMap.insert(file->chunksDownloaded.begin(), file->chunksDownloaded.end());;
+		fileChunkMap.insert(make_pair(file->fileNum, chunkMap));
             }
 
             Frame * chunkInfoRequest = chunkInfo_serialization::createChunkInfoFrame(
@@ -1027,8 +1037,9 @@ Peer::query(Status& status)
 
         // _system
 	// we have to make sure not to count same chunks twice.
-	map<int, bool> systemChunkPresence = 
-	    fileInfoList_.files.at(fileIdx)->chunksDownloaded;
+	map<int, bool> systemChunkPresence;
+	systemChunkPresence.insert(fileInfoList_.files.at(fileIdx)->chunksDownloaded.begin(),
+				   fileInfoList_.files.at(fileIdx)->chunksDownloaded.end());
 
         int totalChunkCountInRemotePeers = 0;
         for (int peerIdx = 0; peerIdx < peers_->getPeerCount(); peerIdx++)
@@ -1262,14 +1273,14 @@ Peer::downloadLoop(){
 		// get the chunk info for the curr file
 		FileInfo *fileInfo = fileInfoList_.getFileFromFileNumber(numChunksIter->first);
 		// iterate chunks downloaded
-		std::map<int, bool>::iterator chunksInter = fileInfo->chunksDownloaded.begin();
 		bool chunkFound = false;
-		for ( ; chunksInter != fileInfo->chunksDownloaded.end(); chunksInter++){
-		    if (chunksInter->second == false){
+		int chunkToDnld = 0;
+		for ( ; chunkToDnld < fileInfo->chunkCount; chunkToDnld++){ 
+		    if (fileInfo->chunksDownloaded[chunkToDnld] == false){
 			cout << "Found chunk to download" << endl;
-			cout << "file number " << numChunksIter->first << endl;
-			cout << "chunk number " << chunksInter->first << endl;
-			chunkFound = true;
+			cout << "file number " << fileInfo->fileNum << endl;
+			cout << "chunk number " << chunkToDnld << endl;
+			chunkFound = true;			
 			break;
 		    }
 		}
@@ -1296,7 +1307,7 @@ Peer::downloadLoop(){
 		// }
 		if (chunkFound){// && peer != -1){
 		    Frame *newFrame = chunkRequestFrame_serialization::
-			createChunkRequestFrame(numChunksIter->first, chunksInter->first);
+			createChunkRequestFrame(numChunksIter->first, chunkToDnld);
 		    (*peers_)[1]->sendFrame(newFrame);
 		    numChunksIter->second++;
 		}

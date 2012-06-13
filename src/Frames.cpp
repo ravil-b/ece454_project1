@@ -277,7 +277,7 @@ namespace chunkInfo_serialization
         std::map<char, std::map<int, bool> > fileMap;
 
         int bytesPerFile = (maxChunksPerFile/8) + 1;
-        for (char fileCounter; fileCounter < getFileCount(frame); fileCounter++)
+        for (char fileCounter = 0; fileCounter < getFileCount(frame); fileCounter++)
         {
             std::map<int, bool> chunkMap;
 
